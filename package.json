@@ -6,7 +6,9 @@
   "directories": {
     "test": "test"
   },
-  "dependencies": {},
+  "dependencies": {
+    "define-frozen-property": "^0.1.0"
+  },
   "devDependencies": {
     "panto": "0.0.11",
     "panto-transformer": "^0.1.4",
