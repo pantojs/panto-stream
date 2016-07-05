@@ -11,18 +11,15 @@
  */
 'use strict';
 
-const {values, extend} = require('lodash');
 const defineFrozenProperty = require('define-frozen-property');
 
 /** Class representing a file collection. */
 class FileCollection {
     constructor(...filenames) {
-        defineFrozenProperty(this, '_fileObjects', {});
+        defineFrozenProperty(this, '_fileMap', new Map());
 
         filenames.forEach(filename => {
-            this._fileObjects[filename] = {
-                filename
-            };
+            this._fileMap.set(filename, {filename});
         });
     }
     /**
@@ -32,7 +29,9 @@ class FileCollection {
      * @return {FileCollection} this
      */
     wrap(fileCollection) {
-        extend(this._fileObjects, fileCollection._fileObjects);
+        fileCollection._fileMap.forEach((value, key) => {
+            this._fileMap.set(key, value);
+        });
         return this;
     }
     /**
@@ -42,7 +41,7 @@ class FileCollection {
      * @return {Boolean} If has it
      */
     has(filename) {
-        return filename in this._fileObjects;
+        return this._fileMap.has(filename);
     }
     /**
      * Get a file by filename.
@@ -51,7 +50,7 @@ class FileCollection {
      * @return {object} file
      */
     get(filename) {
-        return this._fileObjects[filename];
+        return this._fileMap.get(filename);
     }
     /**
      * Add a file if has not or be forced.
@@ -61,10 +60,10 @@ class FileCollection {
      * @return {FileCollection} this
      */
     add(file, force) {
-        const {_fileObjects} = this;
+        const {_fileMap} = this;
 
-        if (file && (force || !(file.filename in _fileObjects))) {
-            _fileObjects[file.filename] = file;
+        if (file && (force || !(_fileMap.has(file.filename)))) {
+            _fileMap.set(file.filename, file);
         }
         return this;
     }
@@ -75,7 +74,7 @@ class FileCollection {
      * @return {FileCollection} this
      */
     remove(filename) {
-        delete this._fileObjects[filename];
+        delete this._fileMap.delete(filename);
         return this;
     }
     /**
@@ -85,7 +84,7 @@ class FileCollection {
      * @return {FileCollection} this
      */
     refresh(filename) {
-        const file = this._fileObjects[filename];
+        const file = this._fileMap.get(filename);
         if (file) {
             file.content = null;
         }
@@ -97,7 +96,15 @@ class FileCollection {
      * @return {array}
      */
     values() {
-        return values(this._fileObjects);
+        const values = [];
+        const it = this._fileMap.values();
+        let val;
+        
+        while (!(val = it.next()).done) {
+            values.push(val.value);
+        }
+        
+        return values;
     }
     /**
      * Update one file at most according to diff.

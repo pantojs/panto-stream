@@ -13,7 +13,7 @@
         "semi": 2
     },
     "globals": {
-        "Promise": 1,
-        "panto": 1
+        "Map": 1,
+        "Promise": 1
     }
 }
