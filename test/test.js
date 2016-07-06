@@ -6,7 +6,7 @@
  * 2016-07-05[23:18:22]:revised
  *
  * @author yanni4night@gmail.com
- * @version 0.1.0
+ * @version 0.2.0
  * @since 0.1.0
  */
 'use strict';
@@ -14,6 +14,7 @@ const assert = require('assert');
 const Stream = require('../');
 const Transformer = require('panto-transformer');
 const extend = require('lodash/extend');
+require('panto');
 
 /*global describe,it*/
 /*eslint no-console: ["error", { allow: ["error"] }] */

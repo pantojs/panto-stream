@@ -15,7 +15,7 @@ const FileCollection = require('./file-collection');
 const EventEmitter = require('events');
 const {flattenDeep, extend} = require('lodash');
 const defineFrozenProperty = require('define-frozen-property');
-require('panto');
+
 /** Class representing a stream. */
 class Stream extends EventEmitter {
     constructor(parent, pattern, transformer) {
