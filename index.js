@@ -23,7 +23,7 @@ class Stream extends EventEmitter {
         defineFrozenProperty(this, '_parent', parent);
         defineFrozenProperty(this, '_pattern', pattern);
         defineFrozenProperty(this, '_transformer', transformer);
-        defineFrozenProperty(this, '_cacheFiles', new FileCollection());
+        defineFrozenProperty(this, '_cacheFiles', new Map());
         this.tag = '';
     }
     /**
@@ -84,41 +84,48 @@ class Stream extends EventEmitter {
     flow(files) {
         files = files || this._matchFiles.values();
 
+        let allCached = true;
+
+        const cacheFiles = files.map(file => {
+            allCached = allCached && this._cacheFiles.has(file.filename);
+            return this._cacheFiles.get(file.filename) || file;
+        });
+
+        if (allCached) {
+            if (!this._transformer) {
+                return Promise.resolve(cacheFiles).then(flattenDeep);
+            } else if (this._transformer.isTorrential()) {
+                return this._transformer.transformAll(cacheFiles);
+            } else {
+                return Promise.all(cacheFiles.map(file => this._transformer.transform(file))).then(flattenDeep);
+            }
+        }
+
+        // Some files need to re-transformed
+
+        let fs;
         if (this._parent) {
-            return this._parent.flow(files).then(files => {
-                return this._flow(files);
+            fs = this._parent.flow(files).then(files => {
+                // Cache
+                files.forEach(file => this._cacheFiles.set(file.filename, extend({}, file)));
+                return files;
             });
         } else {
-            return this._flow(files);
+            fs = Promise.resolve(cacheFiles);
         }
-    }
-    /**
-     * Flow the files myself. Use cache is possible.
-     * 
-     * @param  {Array}  files
-     * @return {Promise}
-     */
-    _flow(files = []) {
-        const tasks = files.map(file => {
-            if (this._cacheFiles.has(file.filename)) {
-                return Promise.resolve(this._cacheFiles.get(file.filename));
-            } else if (this._transformer) {
-                return this._transformer.transform(file).then(files => {
-                    if (!Array.isArray(files)) {
-                        files = [files];
-                    }
 
-                    return files.filter(file => !!file).map(file => {
-                        this._cacheFiles.add(extend({}, file), true);
-                        return file;
-                    });
-
-                });
+        if (this._transformer) {
+            if (this._transformer.isTorrential()) {
+                fs = fs.then(files => this._transformer.transformAll(files));
             } else {
-                return Promise.resolve(file);
+                fs = fs.then(files => {
+                    return Promise.all(files.map(file => this._transformer.transform(file)));
+                });
             }
-        });
-        return Promise.all(tasks).then(flattenDeep);
+        }
+
+
+        return fs.then(flattenDeep);
     }
     /**
      * Fire an end event.
