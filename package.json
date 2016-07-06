@@ -1,6 +1,6 @@
 {
   "name": "panto-stream",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Stream for panto",
   "main": "index.js",
   "directories": {
@@ -10,8 +10,8 @@
     "define-frozen-property": "^0.1.0"
   },
   "devDependencies": {
-    "panto": "0.0.11",
-    "panto-transformer": "^0.1.4",
+    "panto": "0.0.12",
+    "panto-transformer": "next",
     "pre-commit": "^1.1.3"
   },
   "pre-commit": "test",
