@@ -52,19 +52,19 @@ class Stream extends EventEmitter {
         return null === this._pattern;
     }
     /**
-     * Try to fixed the matched/cached files according to diffs.
+     * Try to push the matched/cached files according to diffs.
      * 
      * @param  {object} diff
      * @param  {Boolean} force
-     * @return {Boolean} If fixed
+     * @return {Boolean} If pushed
      */
-    fix(diff, force) {
+    push(diff, force) {
         if ('change' === diff.cmd || 'remove' === diff.cmd) {
             this._cacheFiles.remove(diff.filename);
         }
 
         if (this._parent) {
-            this._parent.fix(diff, force);
+            this._parent.push(diff, force);
         }
 
         if (this._matchFiles && (force || (this._pattern && minimatch(diff.filename, this._pattern)))) {

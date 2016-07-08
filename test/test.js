@@ -65,15 +65,15 @@ describe('stream', () => {
             rs.emit('end');
         });
     });
-    describe('#fix#flow', () => {
+    describe('#push#flow', () => {
         it('should return origin file if transformer is null', done => {
             const s = new Stream(null, '*.js').end();
-            s.fix({
+            s.push({
                 cmd: 'add',
                 filename: 'a.js',
                 content: 'aaaa'
             });
-            s.fix({
+            s.push({
                 cmd: 'add',
                 filename: 'b.js',
                 content: 'bbbb'
@@ -92,7 +92,7 @@ describe('stream', () => {
         });
         it('transform using own transformer if no parent', done => {
             const s = new Stream(null, '*.js', new DoubleTransformer()).end();
-            s.fix({
+            s.push({
                 cmd: 'add',
                 filename: 'a.js',
                 content: 'aa'
@@ -110,7 +110,7 @@ describe('stream', () => {
             const s = new Stream(null, '*.js', new DoubleTransformer()).end();
 
             const s1 = s.pipe(new DoubleTransformer()).pipe(new DoubleTransformer()).end();
-            s1.fix({
+            s1.push({
                 cmd: 'add',
                 filename: 'a.js',
                 content: 'a'
@@ -126,7 +126,7 @@ describe('stream', () => {
         });
         it('should get multiple files', done => {
             const s = new Stream(null, '*.js', new MultiplyTransformer()).end();
-            s.fix({
+            s.push({
                 cmd: 'add',
                 filename: 'a.js',
                 content: 'a'
@@ -156,7 +156,7 @@ describe('stream', () => {
                 data: null
             })).end();
 
-            s.fix({
+            s.push({
                 cmd: 'add',
                 filename: 'a.js',
                 content: 'a'
@@ -167,23 +167,23 @@ describe('stream', () => {
                 done();
             });
         });
-        it('fix could force even file not matched', done => {
+        it('push could force even file not matched', done => {
             const s = new Stream(null, '*.css').end();
             const file = {
                 cmd: 'add',
                 filename: 'a.js'
             };
-            s.fix(file);
+            s.push(file);
             s.flow().then(files => {
-                assert.deepEqual(files, [], 'file not match cannot fix');
+                assert.deepEqual(files, [], 'file not match cannot push');
             }).then(() => {
-                s.fix(file, true);
+                s.push(file, true);
                 return s.flow();
             }).then(files => {
                 assert.deepEqual(files, [{
                     filename: 'a.js',
                     content: undefined
-                }], 'file fixed if force');
+                }], 'file pushed if force');
             }).then(() => {
                 done();
             }).catch(e => console.error(e));
@@ -202,7 +202,7 @@ describe('stream', () => {
             }
 
             const s = new Stream(null, '*.js').pipe(new OnceTransformer()).end();
-            s.fix({
+            s.push({
                 cmd: 'add',
                 filename: 'a.js'
             });
@@ -246,7 +246,7 @@ describe('stream', () => {
             const s2 = s1.pipe(new AppendTransformer({
                 n: 3
             })).end();
-            s2.fix({
+            s2.push({
                 cmd: 'add',
                 filename: 'a.js'
             });
@@ -261,7 +261,7 @@ describe('stream', () => {
                     n: 4
                 })).end();
 
-                s3.fix({
+                s3.push({
                     cmd: 'add',
                     filename: 'a.js'
                 });
