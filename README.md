@@ -16,7 +16,7 @@ s.flow().then(...);
 ## apis
  - pipe(transformer):
  - end(tag):
- - fix(diff, force)
+ - push(diff, force)
  - isRest()
  - flow()
 
