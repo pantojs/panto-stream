@@ -76,56 +76,59 @@ class Stream extends EventEmitter {
         return false;
     }
     /**
-     * Flow the files, if has parent, parent flows first.
+     * Flow the files, if has parent, parent flows first,
+     * if files is undefined, flows matched files instead.
      * 
-     * @param  {Array} files 
+     * @param  {Array|undefined} files 
      * @return {Promise}
      */
     flow(files) {
-        files = files || this._matchFiles.values();
+        const filesToFlow = files || this._matchFiles.values();
 
-        let allCached = true;
+        let retPromise;
 
-        const cacheFiles = files.map(file => {
-            allCached = allCached && this._cacheFiles.has(file.filename);
-            return this._cacheFiles.get(file.filename) || file;
-        });
+        const callParent = files => this._parent.flow(files);
 
-        if (allCached) {
-            if (!this._transformer) {
-                return Promise.resolve(cacheFiles).then(flattenDeep);
-            } else if (this._transformer.isTorrential()) {
-                return this._transformer.transformAll(cacheFiles);
+        const flowInTorrential = files => this._transformer.transformAll(files);
+
+        const flowOutOfTorrential = files => {
+            return Promise.all(files.map(file => {
+                if (this._cacheFiles.has(file.filename)) {
+                    return Promise.resolve(this._cacheFiles.get(file.filename));
+                } else {
+                    return this._transformer.transform(file).then(file => {
+                        this._cacheFiles.set(file.filename, extend({}, file));
+                        return file;
+                    });
+                }
+            }));
+        };
+
+        if (!this._transformer) {
+            // Just pass through
+            if (this._parent) {
+                retPromise = callParent(filesToFlow);
             } else {
-                return Promise.all(cacheFiles.map(file => this._transformer.transform(file))).then(flattenDeep);
+                retPromise = Promise.resolve(filesToFlow);
             }
-        }
-
-        // Some files need to re-transformed
-
-        let fs;
-        if (this._parent) {
-            fs = this._parent.flow(files).then(files => {
-                // Cache
-                files.forEach(file => this._cacheFiles.set(file.filename, extend({}, file)));
-                return files;
-            });
+        } else if (this._transformer.isTorrential()) {
+            // In torrential mode, you cannot use cache
+            if (this._parent) {
+                retPromise = callParent(filesToFlow).then(flowInTorrential);
+            } else {
+                retPromise = flowInTorrential(filesToFlow);
+            }
         } else {
-            fs = Promise.resolve(cacheFiles);
-        }
-
-        if (this._transformer) {
-            if (this._transformer.isTorrential()) {
-                fs = fs.then(files => this._transformer.transformAll(files));
+            if (this._parent) {
+                // Parent may be torrential, so you have
+                // to flow all files instead of some.
+                retPromise = callParent(filesToFlow).then(flowOutOfTorrential);
             } else {
-                fs = fs.then(files => {
-                    return Promise.all(files.map(file => this._transformer.transform(file)));
-                });
+                retPromise = flowOutOfTorrential(filesToFlow);
             }
         }
 
-
-        return fs.then(flattenDeep);
+        return retPromise.then(flattenDeep);
     }
     /**
      * Fire an end event.
