@@ -96,8 +96,11 @@ class Stream extends EventEmitter {
                 if (this._cacheFiles.has(file.filename)) {
                     return Promise.resolve(this._cacheFiles.get(file.filename));
                 } else {
-                    return this._transformer.transform(file).then(file => {
-                        this._cacheFiles.set(file.filename, extend({}, file));
+                    return this._transformer.transform(file).then(tfile => {
+                        if(tfile){
+                            this._cacheFiles.set(file.filename, extend({}, tfile));
+                        }
+                        
                         return file;
                     });
                 }
