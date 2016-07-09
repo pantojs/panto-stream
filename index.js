@@ -101,7 +101,7 @@ class Stream extends EventEmitter {
                             this._cacheFiles.set(file.filename, extend({}, tfile));
                         }
                         
-                        return file;
+                        return tfile;
                     });
                 }
             }));
