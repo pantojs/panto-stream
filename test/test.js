@@ -18,34 +18,6 @@ require('panto');
 
 /*global describe,it*/
 /*eslint no-console: ["error", { allow: ["error"] }] */
-class DoubleTransformer extends Transformer {
-    _transform(file) {
-        const {
-            content
-        } = file;
-        return new Promise(resolve => {
-            resolve(extend(file, {
-                content: content + content
-            }));
-        });
-    }
-}
-
-class MultiplyTransformer extends Transformer {
-    _transform(file) {
-        const {
-            content
-        } = file;
-        return new Promise(resolve => {
-            resolve([
-                extend({}, file),
-                extend({}, file, {
-                    content: content + content
-                })
-            ]);
-        });
-    }
-}
 
 describe('stream', () => {
     describe('#pipe', () => {
@@ -62,189 +34,208 @@ describe('stream', () => {
             s.on('end', () => {
                 done();
             });
-            rs.emit('end');
+            rs.end('tag');
         });
     });
-    describe('#flow', () => {
-        it('should return origin file if transformer is null', done => {
-            const s = new Stream();
 
-            s.flow([{
+    describe('#flow', () => {
+        it('has parent and torrential--no cache,parent flows', done => {
+            let parentInvoked = 0;
+            let childInvoked = 0;
+
+            class ParentTransformer extends Transformer {
+                _transform(file) {
+                    parentInvoked += 1;
+                    return Promise.resolve(extend(file, {
+                        content: file.content + '-parent'
+                    }));
+                }
+                isTorrential() {
+                    return false;
+                }
+            }
+
+            class ChildTransformer extends Transformer {
+                transformAll(files) {
+                    childInvoked += 1;
+                    return super.transformAll(files);
+                }
+                _transform(file) {
+                    return Promise.resolve(extend(file, {
+                        content: file.content + '-child'
+                    }));
+                }
+                isTorrential() {
+                    return true;
+                }
+            }
+
+            const parent = new Stream(null, null, new ParentTransformer());
+            const child = new Stream(parent, null, new ChildTransformer());
+
+            child.flow([{
                 filename: 'a.js',
-                content: 'aaaa'
+                content: 'content'
             }, {
                 filename: 'b.js',
-                content: 'bbbb'
+                content: 'content'
             }]).then(files => {
                 assert.deepEqual(files, [{
                     filename: 'a.js',
-                    content: 'aaaa'
+                    content: 'content-parent-child'
                 }, {
                     filename: 'b.js',
-                    content: 'bbbb'
+                    content: 'content-parent-child'
                 }]);
-
-                done();
-            });
-        });
-        it('transform using own transformer if no parent', done => {
-            const s = new Stream(null, null, new DoubleTransformer());
-
-            s.flow([{
-                filename: 'a.js',
-                content: 'aa'
-            }]).then(files => {
-                assert.deepEqual(files, [{
-                    filename: 'a.js',
-                    content: 'aaaa'
-                }]);
-            }).then(() => {
-                done();
-            }).catch(e => console.error(e));
-        });
-        it('transform to the ancestor', done => {
-            const s = new Stream(null, '*.js', new DoubleTransformer()).pipe(new DoubleTransformer())
-                .pipe(new DoubleTransformer());
-            s.flow([{
-                filename: 'a.js',
-                content: 'a'
-            }]).then(files => {
-                assert.deepEqual(files, [{
-                    filename: 'a.js',
-                    content: 'aaaaaaaa' //2^3
-                }]);
-            }).then(() => {
-                done();
-            });
-        });
-        /*it('should get multiple files', done => {
-            const s = new Stream(null, null, new MultiplyTransformer());
-
-            s.flow([{
-                filename: 'a.js',
-                content: 'a'
-            }]).then(files => {
-                assert.deepEqual(files, [{
-                    filename: 'a.js',
-                    content: 'a'
-                }, {
-                    filename: 'a.js',
-                    content: 'aa'
-                }]);
-                done();
-            });
-        });*/
-        /*it('should support null/undefined/[]', done => {
-            class EmptyTransformer extends Transformer {
-                _transform() {
-                    return Promise.resolve(this.options.data);
-                }
-            }
-            const s = new Stream().pipe(new EmptyTransformer({
-                data: undefined
-            })).pipe(new EmptyTransformer({
-                data: []
-            })).pipe(new EmptyTransformer({
-                data: null
-            }));
-
-            s.flow([{
-                filename: 'a.js',
-                content: 'a'
-            }]).then(files => {
-                assert.deepEqual(files, []);
+                return child.flow(files);
+            }).then(files => child.flow(files)).then(files => {
+                assert.deepEqual(parentInvoked, files.length, 'untorrential parent tranforms files count times bacause of cache');
+                assert.deepEqual(childInvoked, 3, 'torrential child transformAll flowing times');
             }).then(() => done()).catch(e => console.error(e));
-        });*/
-        it('should cache', done => {
-            let transformed = false;
-            class OnceTransformer extends Transformer {
-                _transform(file) {
-                    const ret = Promise.resolve(transformed ? null : extend(file, {
-                        content: 'a'
-                    }));
-                    transformed = true;
-                    return ret;
-                }
-            }
 
-            const s = new Stream(null, '*.js').pipe(new OnceTransformer()).end();
-            s.push({
-                cmd: 'add',
-                filename: 'a.js'
-            });
-            s.flow().then(files => {
-                assert.deepEqual(files, [{
-                    filename: 'a.js',
-                    content: 'a'
-                }]);
-            }).then(() => {
-                return s.flow();
-            }).then(files => {
-                assert.deepEqual(files, [{
-                    filename: 'a.js',
-                    content: 'a'
-                }]);
-            }).then(() => {
-                done();
-            }).catch(e => console.error(e));
         });
-        it('should support furcal&cache', done => {
-            let total = 0;
-            class OneTransformer extends Transformer {
+        it('has parent and not torrential--cached,parent flows;', done => {
+            let parentInvoked = 0;
+            let childInvoked = 0;
+
+            class ParentTransformer extends Transformer {
                 _transform(file) {
-                    ++total;
+                    parentInvoked += 1;
                     return Promise.resolve(extend(file, {
-                        n: '1'
+                        content: file.content + '-parent'
                     }));
                 }
-            }
-            class AppendTransformer extends Transformer {
-                _transform(file) {
-                    return Promise.resolve(extend(file, {
-                        n: file.n + '' + this.options.n
-                    }));
+                isTorrential() {
+                    return false;
                 }
             }
-            const s = new Stream(null, '*.js', new OneTransformer());
-            const s1 = s.pipe(new AppendTransformer({
-                n: 2
-            }));
-            const s2 = s1.pipe(new AppendTransformer({
-                n: 3
-            })).end();
-            s2.push({
-                cmd: 'add',
-                filename: 'a.js'
-            });
-            s2.flow().then(files => {
+
+            class ChildTransformer extends Transformer {
+                _transform(file) {
+                    childInvoked += 1;
+                    return Promise.resolve(extend(file, {
+                        content: file.content + '-child'
+                    }));
+                }
+                isTorrential() {
+                    return false;
+                }
+            }
+
+            const parent = new Stream(null, null, new ParentTransformer());
+            const child = new Stream(parent, null, new ChildTransformer());
+
+            child.flow([{
+                filename: 'a.js',
+                content: 'content'
+            }, {
+                filename: 'b.js',
+                content: 'content'
+            }]).then(files => {
                 assert.deepEqual(files, [{
                     filename: 'a.js',
-                    n: '123',
-                    content: undefined
-                }], 'transformers in series');
-            }).then(() => {
-                const s3 = s1.pipe(new AppendTransformer({
-                    n: 4
-                })).end();
-
-                s3.push({
-                    cmd: 'add',
-                    filename: 'a.js'
-                });
-
-                return s3.flow();
-            }).then(files => {
-                assert.deepEqual(files, [{
-                    filename: 'a.js',
-                    n: '124',
-                    content: undefined
-                }], 'transformers in another series');
-                assert.deepEqual(total, 1, 'stream caches');
-                done();
-            }).catch(e => console.error(e));
+                    content: 'content-parent-child'
+                }, {
+                    filename: 'b.js',
+                    content: 'content-parent-child'
+                }]);
+                return child.flow(files);
+            }).then(files => child.flow(files)).then(files => {
+                assert.deepEqual(parentInvoked, files.length, 'untorrential parent tranforms files count times bacause of cache');
+                assert.deepEqual(childInvoked, files.length, 'torrential child tranforms files count times bacause of cache');
+            }).then(() => done()).catch(e => console.error(e));
         });
+        it('has no parent and torrential--no cache', done => {
+            let childInvoked = 0;
+
+            class ChildTransformer extends Transformer {
+                transformAll(files) {
+                    childInvoked += 1;
+                    return super.transformAll(files);
+                }
+                _transform(file) {
+                    return Promise.resolve(extend(file, {
+                        content: file.content + '-child'
+                    }));
+                }
+                isTorrential() {
+                    return true;
+                }
+            }
+
+            const child = new Stream(null, null, new ChildTransformer());
+
+            child.flow([{
+                filename: 'a.js',
+                content: 'content'
+            }, {
+                filename: 'b.js',
+                content: 'content'
+            }]).then(files => {
+                assert.deepEqual(files, [{
+                    filename: 'a.js',
+                    content: 'content-child'
+                }, {
+                    filename: 'b.js',
+                    content: 'content-child'
+                }]);
+                return child.flow(files);
+            }).then(files => child.flow(files)).then(files => {
+                assert.deepEqual(childInvoked, 3, 'torrential child transformAll flowing times');
+            }).then(() => done()).catch(e => console.error(e));
+        });
+        it('has no parent and not torrential--cached', done => {
+            let childInvoked = 0;
+
+            class ChildTransformer extends Transformer {
+                _transform(file) {
+                    childInvoked += 1;
+                    return Promise.resolve(extend(file, {
+                        content: file.content + '-child'
+                    }));
+                }
+                isTorrential() {
+                    return false;
+                }
+            }
+
+            const child = new Stream(null, null, new ChildTransformer());
+
+            child.flow([{
+                filename: 'a.js',
+                content: 'content'
+            }, {
+                filename: 'b.js',
+                content: 'content'
+            }]).then(files => {
+                assert.deepEqual(files, [{
+                    filename: 'a.js',
+                    content: 'content-child'
+                }, {
+                    filename: 'b.js',
+                    content: 'content-child'
+                }]);
+                return child.flow(files);
+            }).then(files => child.flow(files)).then(files => {
+                assert.deepEqual(childInvoked, files.length, 'torrential child tranforms files count times bacause of cache');
+            }).then(() => done()).catch(e => console.error(e));
+        });
+        it('has parent and no transformer--through',done=>{
+            const child = new Stream();
+            const files=[{
+                filename: 'a.js',
+                content: 'content'
+            }, {
+                filename: 'b.js',
+                content: 'content'
+            }];
+            child.flow(files).then(tfiles => {
+                assert.deepEqual(tfiles, files);
+            }).then(() => done()).catch(e => console.error(e));
+        })
     });
-    describe('#push', function () {
+
+    describe('#push', () => {
         it('push could force even file not matched', done => {
             const s = new Stream(null, '*.css').end();
             const file = {
@@ -296,8 +287,8 @@ describe('stream', () => {
             s.end();
         });
         it('should emit "end" event to th ancestor', done => {
-            const s = new Stream(null, '', new DoubleTransformer());
-            const last = s.pipe(new DoubleTransformer()).pipe(new DoubleTransformer());
+            const s = new Stream(null, '', new Transformer());
+            const last = s.pipe(new Transformer()).pipe(new Transformer());
             s.on('end', leaf => {
                 assert.deepEqual(leaf, last);
                 done();
