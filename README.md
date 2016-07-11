@@ -1,14 +1,14 @@
 # panto-stream
-[![NPM version][npm-image]][npm-url] [![Downloads][downloads-image]][npm-url] [![Build Status][travis-image]][travis-url] [![Coverage Status][coverage-image][coverage-url] [![Dependency status][david-dm-image]][david-dm-url] [![Dev Dependency status][david-dm-dev-image]][david-dm-dev-url]
+[![NPM version][npm-image]][npm-url] [![Downloads][downloads-image]][npm-url] [![Build Status][travis-image]][travis-url] [![Coverage Status][coverage-image]][coverage-url] [![Dependency status][david-dm-image]][david-dm-url] [![Dev Dependency status][david-dm-dev-image]][david-dm-dev-url]
 
 Stream for panto.
 
 ```js
 const Stream = ('panto-stream');
 
-const s = new Stream(null, '*.js');
+const s = new Stream(null, '*.js').pipe(transformer).end();
 
-s.pipe(transformer).end();
+s.push({filename: 'a.js', cmd: 'add'});
 
 s.flow().then(...);
 ```
