@@ -4,9 +4,10 @@
  *
  * changelog
  * 2016-07-05[23:15:32]:revised
+ * 2016-07-11[09:26:00]:new flow
  *
  * @author yanni4night@gmail.com
- * @version 0.1.0
+ * @version 0.3.0
  * @since 0.1.0
  */
 'use strict';
@@ -23,7 +24,7 @@ class Stream extends EventEmitter {
         defineFrozenProperty(this, '_parent', parent);
         defineFrozenProperty(this, '_pattern', pattern);
         defineFrozenProperty(this, '_transformer', transformer);
-        defineFrozenProperty(this, '_cacheFiles', new FileCollection());
+        defineFrozenProperty(this, '_cacheFiles', new Map());
         this.tag = '';
     }
     /**
@@ -52,19 +53,19 @@ class Stream extends EventEmitter {
         return null === this._pattern;
     }
     /**
-     * Try to fixed the matched/cached files according to diffs.
+     * Try to push the matched/cached files according to diffs.
      * 
      * @param  {object} diff
      * @param  {Boolean} force
-     * @return {Boolean} If fixed
+     * @return {Boolean} If pushed
      */
-    fix(diff, force) {
+    push(diff, force) {
         if ('change' === diff.cmd || 'remove' === diff.cmd) {
-            this._cacheFiles.remove(diff.filename);
+            this._cacheFiles.delete(diff.filename);
         }
 
         if (this._parent) {
-            this._parent.fix(diff, force);
+            this._parent.push(diff, force);
         }
 
         if (this._matchFiles && (force || (this._pattern && minimatch(diff.filename, this._pattern)))) {
@@ -76,49 +77,62 @@ class Stream extends EventEmitter {
         return false;
     }
     /**
-     * Flow the files, if has parent, parent flows first.
+     * Flow the files, if has parent, parent flows first,
+     * if files is undefined, flows matched files instead.
      * 
-     * @param  {Array} files 
+     * @param  {Array|undefined} files 
      * @return {Promise}
      */
     flow(files) {
-        files = files || this._matchFiles.values();
+        const filesToFlow = files || this._matchFiles.values();
 
-        if (this._parent) {
-            return this._parent.flow(files).then(files => {
-                return this._flow(files);
-            });
-        } else {
-            return this._flow(files);
-        }
-    }
-    /**
-     * Flow the files myself. Use cache is possible.
-     * 
-     * @param  {Array}  files
-     * @return {Promise}
-     */
-    _flow(files = []) {
-        const tasks = files.map(file => {
-            if (this._cacheFiles.has(file.filename)) {
-                return Promise.resolve(this._cacheFiles.get(file.filename));
-            } else if (this._transformer) {
-                return this._transformer.transform(file).then(files => {
-                    if (!Array.isArray(files)) {
-                        files = [files];
-                    }
+        let retPromise;
 
-                    return files.filter(file => !!file).map(file => {
-                        this._cacheFiles.add(extend({}, file), true);
-                        return file;
+        const callParent = files => this._parent.flow(files);
+
+        const flowInTorrential = files => this._transformer.transformAll(files);
+
+        const flowOutOfTorrential = files => {
+            return Promise.all(files.map(file => {
+                if (this._cacheFiles.has(file.filename)) {
+                    return Promise.resolve(this._cacheFiles.get(file.filename));
+                } else {
+                    return this._transformer.transform(file).then(tfile => {
+                        if(tfile){
+                            this._cacheFiles.set(file.filename, extend({}, tfile));
+                        }
+                        
+                        return tfile;
                     });
+                }
+            }));
+        };
 
-                });
+        if (!this._transformer) {
+            // Just pass through
+            if (this._parent) {
+                retPromise = callParent(filesToFlow);
             } else {
-                return Promise.resolve(file);
+                retPromise = Promise.resolve(filesToFlow);
             }
-        });
-        return Promise.all(tasks).then(flattenDeep);
+        } else if (this._transformer.isTorrential()) {
+            // In torrential mode, you cannot use cache
+            if (this._parent) {
+                retPromise = callParent(filesToFlow).then(flowInTorrential);
+            } else {
+                retPromise = flowInTorrential(filesToFlow);
+            }
+        } else {
+            if (this._parent) {
+                // Parent may be torrential, so you have
+                // to flow all files instead of some.
+                retPromise = callParent(filesToFlow).then(flowOutOfTorrential);
+            } else {
+                retPromise = flowOutOfTorrential(filesToFlow);
+            }
+        }
+
+        return retPromise.then(flattenDeep);
     }
     /**
      * Fire an end event.

@@ -1,5 +1,5 @@
 # panto-stream
-[![NPM version][npm-image]][npm-url] [![Downloads][downloads-image]][npm-url] [![Build Status][travis-image]][travis-url] [![Dependency status][david-dm-image]][david-dm-url] [![Dev Dependency status][david-dm-dev-image]][david-dm-dev-url]
+[![NPM version][npm-image]][npm-url] [![Downloads][downloads-image]][npm-url] [![Build Status][travis-image]][travis-url] [![Coverage Status][coverage-image][coverage-url] [![Dependency status][david-dm-image]][david-dm-url] [![Dev Dependency status][david-dm-dev-image]][david-dm-dev-url]
 
 Stream for panto.
 
@@ -16,7 +16,7 @@ s.flow().then(...);
 ## apis
  - pipe(transformer):
  - end(tag):
- - fix(diff, force)
+ - push(diff, force)
  - isRest()
  - flow()
 
@@ -29,3 +29,5 @@ s.flow().then(...);
 [david-dm-image]:https://david-dm.org/pantojs/panto-stream.svg
 [david-dm-dev-url]:https://david-dm.org/pantojs/panto-stream#info=devDependencies
 [david-dm-dev-image]:https://david-dm.org/pantojs/panto-stream/dev-status.svg
+[coverage-image]:https://coveralls.io/repos/github/pantojs/panto-stream/badge.svg?branch=master
+[coverage-url]:https://coveralls.io/github/pantojs/panto-stream?branch=master
