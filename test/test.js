@@ -89,8 +89,11 @@ describe('stream', () => {
                 }]);
                 return child.flow(files);
             }).then(files => child.flow(files)).then(files => {
-                assert.deepEqual(parentInvoked, files.length, 'untorrential parent tranforms files count times bacause of cache');
-                assert.deepEqual(childInvoked, 3, 'torrential child transformAll flowing times');
+                assert.deepEqual(parentInvoked, files.length,
+                    'untorrential parent tranforms files count times bacause of cache'
+                );
+                assert.deepEqual(childInvoked, 3,
+                    'torrential child transformAll flowing times');
             }).then(() => done()).catch(e => console.error(e));
 
         });
@@ -141,8 +144,12 @@ describe('stream', () => {
                 }]);
                 return child.flow(files);
             }).then(files => child.flow(files)).then(files => {
-                assert.deepEqual(parentInvoked, files.length, 'untorrential parent tranforms files count times bacause of cache');
-                assert.deepEqual(childInvoked, files.length, 'torrential child tranforms files count times bacause of cache');
+                assert.deepEqual(parentInvoked, files.length,
+                    'untorrential parent tranforms files count times bacause of cache'
+                );
+                assert.deepEqual(childInvoked, files.length,
+                    'torrential child tranforms files count times bacause of cache'
+                );
             }).then(() => done()).catch(e => console.error(e));
         });
         it('has no parent and torrential--no cache', done => {
@@ -181,7 +188,8 @@ describe('stream', () => {
                 }]);
                 return child.flow(files);
             }).then(files => child.flow(files)).then(files => {
-                assert.deepEqual(childInvoked, 3, 'torrential child transformAll flowing times');
+                assert.deepEqual(childInvoked, 3,
+                    'torrential child transformAll flowing times');
             }).then(() => done()).catch(e => console.error(e));
         });
         it('has no parent and not torrential--cached', done => {
@@ -217,12 +225,14 @@ describe('stream', () => {
                 }]);
                 return child.flow(files);
             }).then(files => child.flow(files)).then(files => {
-                assert.deepEqual(childInvoked, files.length, 'torrential child tranforms files count times bacause of cache');
+                assert.deepEqual(childInvoked, files.length,
+                    'torrential child tranforms files count times bacause of cache'
+                );
             }).then(() => done()).catch(e => console.error(e));
         });
-        it('has parent and no transformer--through',done=>{
+        it('has parent and no transformer--through', done => {
             const child = new Stream();
-            const files=[{
+            const files = [{
                 filename: 'a.js',
                 content: 'content'
             }, {
@@ -256,6 +266,108 @@ describe('stream', () => {
             }).then(() => {
                 done();
             }).catch(e => console.error(e));
+
+        });
+        it('could clear cache', done => {
+            let invoked = 0;
+            class TestTransformer extends Transformer {
+                _transform(file) {
+                    invoked += 1;
+                    return super._transform(file);
+                }
+            }
+            const s = new Stream(null, null, new TestTransformer());
+            s.flow([{
+                filename: 'a.js',
+                content: 'content'
+            }, {
+                filename: 'b.js',
+                content: 'content'
+            }]).then(files => {
+                assert.deepEqual(invoked, 2, 'one time');
+                return s.flow(files);
+            }).then(files => {
+                assert.deepEqual(invoked, 2, 'still one time dut to cache');
+                s.push({
+                    filename: 'a.js',
+                    cmd: 'remove'
+                });
+                return s.flow(files);
+            }).then(() => {
+                assert.deepEqual(invoked, 3, 'two times due to cache cleared');
+                done();
+            }).catch(e => console.error(e));;
+        });
+
+        it('push to parent', done => {
+            let parentInvoked = 0;
+            let childInvoked = 0;
+
+            class ParentTransformer extends Transformer {
+                _transform(file) {
+                    parentInvoked += 1;
+                    return Promise.resolve(extend(file, {
+                        content: file.content + '-parent'
+                    }));
+                }
+                isTorrential() {
+                    return false;
+                }
+            }
+
+            class ChildTransformer extends Transformer {
+                transformAll(files) {
+                    childInvoked += 1;
+                    return super.transformAll(files);
+                }
+                _transform(file) {
+                    return Promise.resolve(extend(file, {
+                        content: file.content + '-child'
+                    }));
+                }
+                isTorrential() {
+                    return true;
+                }
+            }
+
+            const parent = new Stream(null, null, new ParentTransformer());
+            const child = new Stream(parent, '*.js', new ChildTransformer()).end('child');
+
+            child.push({
+                cmd: 'add',
+                filename: 'a.js',
+                content: 'content'
+            });
+            child.push({
+                cmd: 'add',
+                filename: 'b.js',
+                content: 'content'
+            });
+
+            child.flow().then(files => {
+                assert.deepEqual(files, [{
+                    filename: 'a.js',
+                    content: 'content-parent-child'
+                }, {
+                    filename: 'b.js',
+                    content: 'content-parent-child'
+                }]);
+                child.push({
+                    filename: 'a.js',
+                    cmd: 'remove'
+                });
+                return child.flow();
+            }).then(files => {
+                assert.deepEqual(files, [{
+                    filename: 'b.js',
+                    content: 'content-parent-child'
+                }], 'a.js is removed');
+                assert.deepEqual(parentInvoked, 2,
+                    'untorrential parent tranforms two times due to cache'
+                );
+                assert.deepEqual(childInvoked, 2,
+                    'torrential child transformAll flowing times');
+            }).then(() => done()).catch(e => console.error(e));
 
         });
     });

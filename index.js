@@ -4,9 +4,10 @@
  *
  * changelog
  * 2016-07-05[23:15:32]:revised
+ * 2016-07-11[09:26:00]:new flow
  *
  * @author yanni4night@gmail.com
- * @version 0.1.0
+ * @version 0.3.0
  * @since 0.1.0
  */
 'use strict';
@@ -60,7 +61,7 @@ class Stream extends EventEmitter {
      */
     push(diff, force) {
         if ('change' === diff.cmd || 'remove' === diff.cmd) {
-            this._cacheFiles.remove(diff.filename);
+            this._cacheFiles.delete(diff.filename);
         }
 
         if (this._parent) {
