@@ -7,22 +7,25 @@
  * 2016-07-11[09:26:00]:new flow
  *
  * @author yanni4night@gmail.com
- * @version 0.3.0
+ * @version 0.4.0
  * @since 0.1.0
  */
 'use strict';
 const minimatch = require('minimatch');
 const FileCollection = require('./file-collection');
 const EventEmitter = require('events');
-const {flattenDeep, extend} = require('lodash');
+const {flattenDeep, extend, isString, filter, isNil} = require('lodash');
 const defineFrozenProperty = require('define-frozen-property');
 
 /** Class representing a stream. */
 class Stream extends EventEmitter {
     constructor(parent, pattern, transformer) {
         super();
-        defineFrozenProperty(this, '_parent', parent);
-        defineFrozenProperty(this, '_pattern', pattern);
+        if (!isString(pattern) && !Array.isArray(pattern) && !isNil(pattern)) {
+            throw new Error(`"pattern" has to be a string or null/undefined, but it's ${pattern}`);
+        }
+        defineFrozenProperty(this, '_parent', filter(Array.isArray(parent) ? parent : [parent]));
+        defineFrozenProperty(this, '_pattern', filter(Array.isArray(pattern) ? pattern : [pattern]));
         defineFrozenProperty(this, '_transformer', transformer);
         defineFrozenProperty(this, '_cacheFiles', new Map());
         this.tag = '';
@@ -41,6 +44,15 @@ class Stream extends EventEmitter {
             this.emit('end', leaf);
         });
         return child;
+    }
+    /**
+     * @param  {...Stream}
+     * @return {Stream}
+     */
+    merge(...streams) {
+        const parents = [this, ...streams];
+        const patterns = parents.map(stream => stream._pattern);
+        return new Stream(parents, patterns);
     }
     /**
      * If it's a rest stream.
@@ -64,17 +76,25 @@ class Stream extends EventEmitter {
             this._cacheFiles.delete(diff.filename);
         }
 
-        if (this._parent) {
-            this._parent.push(diff, force);
+        if (this._parent.length) {
+            this._parent.forEach(par => par.push(diff, force));
         }
 
-        if (this._matchFiles && (force || (this._pattern && minimatch(diff.filename, this._pattern)))) {
+        if (this._matchFiles && (force || (this._pattern.length && this._pattern.some(par => {
+                if (isString(par)) {
+                    return minimatch(diff.filename, par);
+                } else {
+                    // Null accept all
+                    return true;
+                }
+            })))) {
             // clear content
             this._matchFiles.update(diff);
 
             return true;
         }
         return false;
+
     }
     /**
      * Flow the files, if has parent, parent flows first,
@@ -88,7 +108,7 @@ class Stream extends EventEmitter {
 
         let retPromise;
 
-        const callParent = files => this._parent.flow(files);
+        const callParent = files => Promise.all(this._parent.map(par => par.flow(files))).then(flattenDeep).then(filter);
 
         const flowInTorrential = files => this._transformer.transformAll(files);
 
@@ -110,20 +130,20 @@ class Stream extends EventEmitter {
 
         if (!this._transformer) {
             // Just pass through
-            if (this._parent) {
+            if (this._parent.length) {
                 retPromise = callParent(filesToFlow);
             } else {
                 retPromise = Promise.resolve(filesToFlow);
             }
         } else if (this._transformer.isTorrential()) {
             // In torrential mode, you cannot use cache
-            if (this._parent) {
+            if (this._parent.length) {
                 retPromise = callParent(filesToFlow).then(flowInTorrential);
             } else {
                 retPromise = flowInTorrential(filesToFlow);
             }
         } else {
-            if (this._parent) {
+            if (this._parent.length) {
                 // Parent may be torrential, so you have
                 // to flow all files instead of some.
                 retPromise = callParent(filesToFlow).then(flowOutOfTorrential);

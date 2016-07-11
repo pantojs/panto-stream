@@ -394,7 +394,7 @@ describe('stream', () => {
 
         });
     });
-    describe('#isRest', () => {
+    /*describe('#isRest', () => {
         it('should return true if pattern is null', () => {
             const s = new Stream(null, null);
             assert.ok(s.isRest());
@@ -407,7 +407,7 @@ describe('stream', () => {
             s = new Stream(null, "");
             assert.ok(!s.isRest());
         });
-    });
+    });*/
     describe('#end', () => {
         it('should set the tag', () => {
             const s = new Stream();
