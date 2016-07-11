@@ -15,42 +15,8 @@ const defineFrozenProperty = require('define-frozen-property');
 
 /** Class representing a file collection. */
 class FileCollection {
-    constructor(...filenames) {
+    constructor() {
         defineFrozenProperty(this, '_fileMap', new Map());
-
-        filenames.forEach(filename => {
-            this._fileMap.set(filename, {filename});
-        });
-    }
-    /**
-     * Copy all the files from a file collection.
-     * 
-     * @param  {FileCollection} fileCollection
-     * @return {FileCollection} this
-     */
-    wrap(fileCollection) {
-        fileCollection._fileMap.forEach((value, key) => {
-            this._fileMap.set(key, value);
-        });
-        return this;
-    }
-    /**
-     * If has a file by filename.
-     * 
-     * @param  {string}  filename
-     * @return {Boolean} If has it
-     */
-    has(filename) {
-        return this._fileMap.has(filename);
-    }
-    /**
-     * Get a file by filename.
-     * 
-     * @param  {string} filename
-     * @return {object} file
-     */
-    get(filename) {
-        return this._fileMap.get(filename);
     }
     /**
      * Add a file if has not or be forced.

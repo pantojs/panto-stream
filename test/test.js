@@ -231,7 +231,18 @@ describe('stream', () => {
             }).then(() => done()).catch(e => console.error(e));
         });
         it('has parent and no transformer--through', done => {
-            const child = new Stream();
+            let parentInvoked = 0;
+            class ParentTransformer extends Transformer {
+                transformAll(files) {
+                    parentInvoked += 1;
+                    return super.transformAll(files);
+                }
+                isTorrential() {
+                    return true;
+                }
+            }
+            const parent = new Stream(null, null, new ParentTransformer());
+            const child = new Stream(parent, null);
             const files = [{
                 filename: 'a.js',
                 content: 'content'
@@ -240,6 +251,7 @@ describe('stream', () => {
                 content: 'content'
             }];
             child.flow(files).then(tfiles => {
+                assert.deepEqual(parentInvoked, 1);
                 assert.deepEqual(tfiles, files);
             }).then(() => done()).catch(e => console.error(e));
         })
@@ -366,6 +378,17 @@ describe('stream', () => {
                     'untorrential parent tranforms two times due to cache'
                 );
                 assert.deepEqual(childInvoked, 2,
+                    'torrential child transformAll flowing times');
+                child.push({
+                    filename: 'b.js',
+                    cmd: 'change'
+                });
+                return child.flow();
+            }).then(() => {
+                assert.deepEqual(parentInvoked, 3,
+                    'untorrential parent tranforms two times due to cache'
+                );
+                assert.deepEqual(childInvoked, 3,
                     'torrential child transformAll flowing times');
             }).then(() => done()).catch(e => console.error(e));
 
