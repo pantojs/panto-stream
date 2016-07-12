@@ -6,9 +6,10 @@
  * 2016-07-05[23:15:32]:revised
  * 2016-07-11[09:26:00]:new flow
  * 2016-07-12[13:45:39]:remove merge
+ * 2016-07-12[14:17:40]:compatible with old transformer
  *
  * @author yanni4night@gmail.com
- * @version 0.5.0
+ * @version 0.5.1
  * @since 0.1.0
  */
 'use strict';
@@ -115,7 +116,7 @@ class Stream extends EventEmitter {
             } else {
                 retPromise = Promise.resolve(filesToFlow);
             }
-        } else if (this._transformer.isTorrential()) {
+        } else if (this._transformer.isTorrential && this._transformer.isTorrential()) {
             // In torrential mode, you cannot use cache
             if (this._parent) {
                 retPromise = callParent(filesToFlow).then(flowInTorrential);
