@@ -14,35 +14,35 @@
 const minimatch = require('minimatch');
 const FileCollection = require('./file-collection');
 const EventEmitter = require('events');
-const {flattenDeep, extend, isString, filter, isNil} = require('lodash');
+const {flattenDeep, cloneDeep, isString, filter, isNil} = require('lodash');
 const defineFrozenProperty = require('define-frozen-property');
 
 /** Class representing a stream. */
 class Stream extends EventEmitter {
-    constructor(parent, pattern, transformer) {
+    constructor(transformer, pattern) {
         super();
-        if (!isString(pattern) && !Array.isArray(pattern) && !isNil(pattern)) {
-            throw new Error(`"pattern" has to be a string or null/undefined, but it's ${pattern}`);
+        if (!isString(pattern) && !isNil(pattern)) {
+            throw new Error(`"pattern" has to be a string or null/undefined, but it's ${typeof pattern}`);
         }
-        defineFrozenProperty(this, '_parent', filter(Array.isArray(parent) ? parent : [parent]));
-        defineFrozenProperty(this, '_pattern', filter(Array.isArray(pattern) ? pattern : [pattern]));
+        defineFrozenProperty(this, '_children', []); // Children should be piped in
+        defineFrozenProperty(this, '_pattern', pattern);
         defineFrozenProperty(this, '_transformer', transformer);
         defineFrozenProperty(this, '_cacheFiles', new Map());
+        if (pattern || null === pattern) {
+            defineFrozenProperty(this, '_matchFiles', new FileCollection());
+        }
         this.tag = '';
     }
     /**
      * Create a new child stream with transformer.
      *
-     * Child's "end" event will fire parent too.
      * 
      * @param  {Transformer} transformer
      * @return {Stream} The new stream
      */
     pipe(transformer) {
-        const child = new Stream(this, this._pattern, transformer);
-        child.on('end', leaf => {
-            this.emit('end', leaf);
-        });
+        const child = new Stream(transformer);
+        this._children.push(child);
         return child;
     }
     /**
@@ -51,8 +51,9 @@ class Stream extends EventEmitter {
      */
     merge(...streams) {
         const parents = [this, ...streams];
-        const patterns = parents.map(stream => stream._pattern);
-        return new Stream(parents, patterns);
+        const child = new Stream();
+        parents.forEach(parent => parent._children.push(child));
+        return child;
     }
     /**
      * If it's a rest stream.
@@ -76,18 +77,9 @@ class Stream extends EventEmitter {
             this._cacheFiles.delete(diff.filename);
         }
 
-        if (this._parent.length) {
-            this._parent.forEach(par => par.push(diff, force));
-        }
+        this._children.forEach(child => child.push(diff, force));
 
-        if (this._matchFiles && (force || (this._pattern.length && this._pattern.some(par => {
-                if (isString(par)) {
-                    return minimatch(diff.filename, par);
-                } else {
-                    // Null accept all
-                    return true;
-                }
-            })))) {
+        if (this._matchFiles && (force || (this._pattern && minimatch(diff.filename, this._pattern)))) {
             // clear content
             this._matchFiles.update(diff);
 
@@ -104,11 +96,11 @@ class Stream extends EventEmitter {
      * @return {Promise}
      */
     flow(files) {
-        const filesToFlow = files || this._matchFiles.values();
+        const filesToFlow = files || this._matchFiles.values();// Only the topest streams have matched files
 
         let retPromise;
 
-        const callParent = files => Promise.all(this._parent.map(par => par.flow(files))).then(flattenDeep).then(filter);
+        const callChildren = files => Promise.all(this._children.map(child => child.flow(files))).then(flattenDeep).then(filter);
 
         const flowInTorrential = files => this._transformer.transformAll(files);
 
@@ -119,9 +111,8 @@ class Stream extends EventEmitter {
                 } else {
                     return this._transformer.transform(file).then(tfile => {
                         if(tfile){
-                            this._cacheFiles.set(file.filename, extend({}, tfile));
+                            this._cacheFiles.set(file.filename, cloneDeep(tfile));
                         }
-                        
                         return tfile;
                     });
                 }
@@ -130,44 +121,29 @@ class Stream extends EventEmitter {
 
         if (!this._transformer) {
             // Just pass through
-            if (this._parent.length) {
-                retPromise = callParent(filesToFlow);
+            if (this._children.length) {
+                retPromise = callChildren(filesToFlow);
             } else {
                 retPromise = Promise.resolve(filesToFlow);
             }
         } else if (this._transformer.isTorrential()) {
             // In torrential mode, you cannot use cache
-            if (this._parent.length) {
-                retPromise = callParent(filesToFlow).then(flowInTorrential);
+            if (this._children.length) {
+                retPromise = flowInTorrential(filesToFlow).then(flattenDeep).then(filter).then(callChildren);
             } else {
                 retPromise = flowInTorrential(filesToFlow);
             }
         } else {
-            if (this._parent.length) {
+            if (this._children.length) {
                 // Parent may be torrential, so you have
                 // to flow all files instead of some.
-                retPromise = callParent(filesToFlow).then(flowOutOfTorrential);
+                retPromise = flowOutOfTorrential(filesToFlow).then(flattenDeep).then(filter).then(callChildren);
             } else {
                 retPromise = flowOutOfTorrential(filesToFlow);
             }
         }
 
         return retPromise.then(flattenDeep);
-    }
-    /**
-     * Fire an end event.
-     * 
-     * @param  {string} tag  This tag for friendly log
-     * @return {Stream} this
-     */
-    end(tag) {
-        this.tag = tag;
-
-        // The ended stream can have matches files
-        defineFrozenProperty(this, '_matchFiles', new FileCollection());
-
-        this.emit('end', this);
-        return this;
     }
 }
 
