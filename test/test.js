@@ -491,4 +491,17 @@ describe('stream', () => {
             assert.ok(!s.isRest());
         });
     });
+    describe('#tag', () => {
+        it('should set tag', () => {
+            const s = new Stream();
+            assert.deepEqual(s.tag('s'), s);
+            assert.deepEqual(String(s.tag), 's');
+        });
+        it('should throw error if tag is illegal', () => {
+            const s = new Stream();
+            assert.throws(()=>{
+                s.tag({});
+            });
+        });
+    });
 });

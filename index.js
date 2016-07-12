@@ -21,17 +21,37 @@ const defineFrozenProperty = require('define-frozen-property');
 class Stream extends EventEmitter {
     constructor(transformer, pattern) {
         super();
+        
         if (!isString(pattern) && !isNil(pattern)) {
             throw new Error(`"pattern" has to be a string or null/undefined, but it's ${typeof pattern}`);
         }
+        
         defineFrozenProperty(this, '_children', []); // Children should be piped in
         defineFrozenProperty(this, '_pattern', pattern);
         defineFrozenProperty(this, '_transformer', transformer);
         defineFrozenProperty(this, '_cacheFiles', new Map());
+        
         if (pattern || null === pattern) {
             defineFrozenProperty(this, '_matchFiles', new FileCollection());
         }
-        this.tag = '';
+
+        let _tag = '';
+
+        const setTag = tag => {
+            if (!isString(tag)) {
+                throw new Error('"tag" should be a string');
+            }
+            _tag = tag;
+            return this;
+        };
+
+        setTag.toString = () => _tag;
+        
+        Object.defineProperty(this, 'tag', {
+            get() {
+                return setTag;
+            }
+        });
     }
     /**
      * Create a new child stream with transformer.
@@ -144,6 +164,10 @@ class Stream extends EventEmitter {
         }
 
         return retPromise.then(flattenDeep);
+    }
+    tag(tag) {
+        this.tag = tag;
+        return this;
     }
 }
 
