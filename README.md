@@ -7,18 +7,12 @@ Stream for panto.
 const Stream = ('panto-stream');
 
 const src = new Stream(null, 'src/*.js').pipe(new BabelTransformer());
-const npms = new Stream(null, 'node_modules/**/*.js');
 
-src.merge(npms).pipe(new UglifyTransformer()).pipe(new WriteTransformer());
-
-src.flow([{filename: 'src/a.js'}]);
-
-npms.flow([{filename: 'node_modules/lib/lib.js'}]);
+src.pipe(new UglifyTransformer()).pipe(new WriteTransformer()).end();
 ```
 
 ## apis
  - pipe(transformer)
- - merge(...streams)
  - push(diff, force)
  - isRest()
  - flow()

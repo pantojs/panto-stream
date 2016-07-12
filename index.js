@@ -5,74 +5,42 @@
  * changelog
  * 2016-07-05[23:15:32]:revised
  * 2016-07-11[09:26:00]:new flow
+ * 2016-07-12[13:45:39]:remove merge
  *
  * @author yanni4night@gmail.com
- * @version 0.4.0
+ * @version 0.5.0
  * @since 0.1.0
  */
 'use strict';
 const minimatch = require('minimatch');
 const FileCollection = require('./file-collection');
 const EventEmitter = require('events');
-const {flattenDeep, cloneDeep, isString, filter, isNil} = require('lodash');
+const {flattenDeep, cloneDeep} = require('lodash');
 const defineFrozenProperty = require('define-frozen-property');
 
 /** Class representing a stream. */
 class Stream extends EventEmitter {
-    constructor(transformer, pattern) {
+    constructor(parent, pattern, transformer) {
         super();
-        
-        if (!isString(pattern) && !isNil(pattern)) {
-            throw new Error(`"pattern" has to be a string or null/undefined, but it's ${typeof pattern}`);
-        }
-        
-        defineFrozenProperty(this, '_children', []); // Children should be piped in
+        defineFrozenProperty(this, '_parent', parent);
         defineFrozenProperty(this, '_pattern', pattern);
         defineFrozenProperty(this, '_transformer', transformer);
         defineFrozenProperty(this, '_cacheFiles', new Map());
-        
-        if (pattern || null === pattern) {
-            defineFrozenProperty(this, '_matchFiles', new FileCollection());
-        }
-
-        let _tag = '';
-
-        const setTag = tag => {
-            if (!isString(tag)) {
-                throw new Error('"tag" should be a string');
-            }
-            _tag = tag;
-            return this;
-        };
-
-        setTag.toString = () => _tag;
-        
-        Object.defineProperty(this, 'tag', {
-            get() {
-                return setTag;
-            }
-        });
+        this.tag = '';
     }
     /**
      * Create a new child stream with transformer.
      *
+     * Child's "end" event will fire parent too.
      * 
      * @param  {Transformer} transformer
      * @return {Stream} The new stream
      */
     pipe(transformer) {
-        const child = new Stream(transformer);
-        this._children.push(child);
-        return child;
-    }
-    /**
-     * @param  {...Stream}
-     * @return {Stream}
-     */
-    merge(...streams) {
-        const parents = [this, ...streams];
-        const child = new Stream();
-        parents.forEach(parent => parent._children.push(child));
+        const child = new Stream(this, this._pattern, transformer);
+        child.on('end', leaf => {
+            this.emit('end', leaf);
+        });
         return child;
     }
     /**
@@ -97,7 +65,9 @@ class Stream extends EventEmitter {
             this._cacheFiles.delete(diff.filename);
         }
 
-        this._children.forEach(child => child.push(diff, force));
+        if (this._parent) {
+            this._parent.push(diff, force);
+        }
 
         if (this._matchFiles && (force || (this._pattern && minimatch(diff.filename, this._pattern)))) {
             // clear content
@@ -106,7 +76,6 @@ class Stream extends EventEmitter {
             return true;
         }
         return false;
-
     }
     /**
      * Flow the files, if has parent, parent flows first,
@@ -116,11 +85,11 @@ class Stream extends EventEmitter {
      * @return {Promise}
      */
     flow(files) {
-        const filesToFlow = files || this._matchFiles.values();// Only the topest streams have matched files
+        const filesToFlow = files || this._matchFiles.values();
 
         let retPromise;
 
-        const callChildren = files => Promise.all(this._children.map(child => child.flow(files))).then(flattenDeep).then(filter);
+        const callParent = files => this._parent.flow(files);
 
         const flowInTorrential = files => this._transformer.transformAll(files);
 
@@ -141,23 +110,23 @@ class Stream extends EventEmitter {
 
         if (!this._transformer) {
             // Just pass through
-            if (this._children.length) {
-                retPromise = callChildren(filesToFlow);
+            if (this._parent) {
+                retPromise = callParent(filesToFlow);
             } else {
                 retPromise = Promise.resolve(filesToFlow);
             }
         } else if (this._transformer.isTorrential()) {
             // In torrential mode, you cannot use cache
-            if (this._children.length) {
-                retPromise = flowInTorrential(filesToFlow).then(flattenDeep).then(filter).then(callChildren);
+            if (this._parent) {
+                retPromise = callParent(filesToFlow).then(flowInTorrential);
             } else {
                 retPromise = flowInTorrential(filesToFlow);
             }
         } else {
-            if (this._children.length) {
+            if (this._parent) {
                 // Parent may be torrential, so you have
                 // to flow all files instead of some.
-                retPromise = flowOutOfTorrential(filesToFlow).then(flattenDeep).then(filter).then(callChildren);
+                retPromise = callParent(filesToFlow).then(flowOutOfTorrential);
             } else {
                 retPromise = flowOutOfTorrential(filesToFlow);
             }
@@ -165,8 +134,19 @@ class Stream extends EventEmitter {
 
         return retPromise.then(flattenDeep);
     }
-    tag(tag) {
+    /**
+     * Fire an end event.
+     * 
+     * @param  {string} tag  This tag for friendly log
+     * @return {Stream} this
+     */
+    end(tag) {
         this.tag = tag;
+
+        // The ended stream can have matches files
+        defineFrozenProperty(this, '_matchFiles', new FileCollection());
+
+        this.emit('end', this);
         return this;
     }
 }
