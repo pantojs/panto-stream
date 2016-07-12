@@ -6,16 +6,19 @@ Stream for panto.
 ```js
 const Stream = ('panto-stream');
 
-const s = new Stream(null, '*.js').pipe(transformer).end();
+const src = new Stream(null, 'src/*.js').pipe(new BabelTransformer());
+const npms = new Stream(null, 'node_modules/**/*.js');
 
-s.push({filename: 'a.js', cmd: 'add'});
+src.merge(npms).pipe(new UglifyTransformer()).pipe(new WriteTransformer());
 
-s.flow().then(...);
+src.flow([{filename: 'src/a.js'}]);
+
+npms.flow([{filename: 'node_modules/lib/lib.js'}]);
 ```
 
 ## apis
- - pipe(transformer):
- - end(tag):
+ - pipe(transformer)
+ - merge(...streams)
  - push(diff, force)
  - isRest()
  - flow()
