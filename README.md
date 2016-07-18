@@ -8,8 +8,11 @@ const PantoStream = ('panto-stream');
 
 const read = new Stream(new ReadTransformer());
 const babel = new Stream(new BabelTransformer());
+const uglify = new Stream(new UglifyTransformer());
 
-read.connect(babel);
+read.connect(babel).connect(uglify);
+
+read.freeze().flow(...files);
 ```
 
 ## apis
@@ -17,7 +20,7 @@ read.connect(babel);
  - notify(...files)
  - freeze()
  - reset()
- - clearCache()
+ - clearCache(...filesname)
  - flow(files)
 
 [npm-url]: https://npmjs.org/package/panto-stream
