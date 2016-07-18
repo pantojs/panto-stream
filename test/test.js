@@ -155,6 +155,29 @@ describe('stream', () => {
                 assert.deepEqual(files, [])
             }).then(() => done()).catch(e => console.error(e));
         });
+        it('should not notify files if not mergeFile', done => {
+            let invoked = 0;
+
+            class TestTransformer extends Transformer {
+                _transform(file) {
+                    invoked += 1;
+                    return super._transform(file);
+                }
+                isTorrential() {
+                    return false;
+                }
+            }
+            const p1 = new PantoStream();
+            const p2 = new PantoStream(new TestTransformer());
+            p1.connect(p2, false);
+            p1.freeze();
+            p1.flow([{
+                filename: 'a.js'
+            }]).then(files => {
+                assert.deepEqual(files, []);
+                assert.deepEqual(invoked, 0);
+            }).then(() => done()).catch(e => console.error(e));
+        });
         it(
             `
     0------►1------►2-------►3-----------
