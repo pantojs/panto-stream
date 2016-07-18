@@ -4,18 +4,21 @@
 Stream for panto.
 
 ```js
-const Stream = ('panto-stream');
+const PantoStream = ('panto-stream');
 
-const src = new Stream(null, 'src/*.js').pipe(new BabelTransformer());
+const read = new Stream(new ReadTransformer());
+const babel = new Stream(new BabelTransformer());
 
-src.pipe(new UglifyTransformer()).pipe(new WriteTransformer()).end();
+read.connect(babel);
 ```
 
 ## apis
- - pipe(transformer)
- - push(diff, force)
- - isRest()
- - flow()
+ - connect(stream, mergeFiles)
+ - notify(...files)
+ - freeze()
+ - clear()
+ - clearCache()
+ - flow(files)
 
 [npm-url]: https://npmjs.org/package/panto-stream
 [downloads-image]: http://img.shields.io/npm/dm/panto-stream.svg
