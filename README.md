@@ -16,7 +16,7 @@ read.connect(babel);
  - connect(stream, mergeFiles)
  - notify(...files)
  - freeze()
- - clear()
+ - reset()
  - clearCache()
  - flow(files)
 

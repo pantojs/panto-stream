@@ -48,33 +48,43 @@ class PantoStream extends EventEmitter {
     notify(...files) {
         this._filesToFlow.push(...files);
         this._parentsCount -= 1;
+        if (this._parentsCount < 0) {
+            this._parentsCount = 0;
+        }
         return this.flow();
+
     }
     freeze() {
         if (!('_parentsTotalCount' in this)) {
             defineFrozenProperty(this, '_parentsTotalCount', this._parentsCount);
         }
-        this._children.forEach(({child}) => child.freeze());
+        this._children.forEach(({
+            child
+        }) => child.freeze());
         return this;
     }
-    clear() {
+    reset() {
         this._filesToFlow.splice(0);
         this._parentsCount = this._parentsTotalCount;
-        this._children.forEach(({child}) => child.clear());
+
         return this;
+
     }
     clearCache(...filenames) {
         filenames.forEach(filename => this._cacheFiles.delete(filename));
-        this._children.forEach(({child}) => child.clearCache(...filenames));
+        this._children.forEach(({
+            child
+        }) => child.clearCache(...filenames));
 
         return this;
     }
     flow(files) {
-        if(0 !== this._parentsCount) {
+
+        if (0 !== this._parentsCount) {
             return Promise.resolve([]);
         }
 
-        const filesToFlow = files || this._filesToFlow;
+        const filesToFlow = cloneDeep(files || this._filesToFlow);
 
         let retPromise;
 
@@ -104,8 +114,7 @@ class PantoStream extends EventEmitter {
         } else {
             retPromise = flowOutOfTorrential(filesToFlow);
         }
-
-        return retPromise.then(filter).then(flattenDeep).then(files => {
+        const ret = retPromise.then(filter).then(flattenDeep).then(files => {
             return this._children.length ? Promise.all(this._children.map(({
                 child,
                 mergeFiles
@@ -117,6 +126,10 @@ class PantoStream extends EventEmitter {
                 }
             })) : files;
         }).then(flattenDeep);
+
+        this.reset();
+
+        return ret;
     }
 }
 

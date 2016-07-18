@@ -95,6 +95,16 @@ describe('stream', () => {
                 assert.deepEqual(invoked, 1);
             }).then(() => done()).catch(e => console.error(e));
         });
+        it('should immutable', done => {
+            const p1 = new PantoStream();
+            const f = {
+                filename: 'a.js'
+            };
+            p1.notify(f).then(ft => {
+                f.filename = 'b.js';
+                assert.deepEqual(ft[0].filename, 'a.js');
+            }).then(() => done()).catch(e => console.error(e));
+        });
         it('should flow to the bottom', done => {
             let invoked = 0;
 
@@ -248,13 +258,37 @@ describe('stream', () => {
                 }).then(() => done()).catch(e => console.error(e));
             });
     });
-    /*describe('#clearCache', () => {
+    describe('#reset', () => {
+        it('should reset after flow', done => {
+            const p1 = new PantoStream();
+
+            p1.freeze();
+            p1.notify({
+                filename: 'a.js'
+            }).then(files => {
+                assert.deepEqual(files.length, 1);
+                return p1.flow();
+            }).then(files => {
+                assert.deepEqual(files.length, 0);
+                p1.reset();
+                return p1.flow();
+            }).then(files => {
+                assert.deepEqual(files.length, 0);
+            }).then(() => done()).catch(e => console.error(e));
+        })
+    });
+    describe('#clearCache', () => {
         it('should cleard cache', done => {
-            let invoked = 0;
+            let invokedA = 0;
+            let invokedB = 0;
 
             class TestTransformer extends Transformer {
                 _transform(file) {
-                    invoked += 1;
+                    if ('a.js' === file.filename) {
+                        invokedA += 1;
+                    } else if ('b.js' === file.filename) {
+                        invokedB += 1;
+                    }
                     return super._transform(file);
                 }
                 isTorrential() {
@@ -272,15 +306,19 @@ describe('stream', () => {
             p1.freeze();
             p1.flow([{
                 filename: 'a.js'
+            }, {
+                filename: 'b.js'
             }]).then(() => {
-                p1.clearCache('a.js');
-                return p1.flow();
+                p1.reset().clearCache('a.js');
+                return p1.flow([{
+                    filename: 'a.js'
+                }, {
+                    filename: 'b.js'
+                }]);
             }).then(() => {
-                assert.deepEqual(invoked, 2);
+                assert.deepEqual(invokedA, 2);
+                assert.deepEqual(invokedB, 1);
             }).then(() => done()).catch(e => console.error(e));
         });
-    });*/
-    /*describe('#clear', () => {
-        it('', done => {});
-    });*/
+    });
 });
