@@ -26,6 +26,12 @@ describe('stream', () => {
             });
             done();
         });
+        it('should throw error when frozen', done => {
+            assert.throws(() => {
+                new PantoStream().freeze().connect(new PantoStream());
+            });
+            done();
+        });
         it('should return child', done => {
             const ps = new PantoStream();
             assert.deepEqual(ps, new PantoStream().connect(ps));
@@ -35,6 +41,7 @@ describe('stream', () => {
     describe('#notify', () => {
         it('should return self', done => {
             const ps = new PantoStream();
+            ps.freeze();
             assert.ok(ps.notify() instanceof Promise);
             done();
         });
@@ -58,9 +65,10 @@ describe('stream', () => {
             const p1 = new PantoStream();
             const p2 = new PantoStream();
             const p3 = new PantoStream(new TestTransformer());
-            p1.connect(p3).freeze();
-            p2.connect(p3).freeze();
-
+            p1.connect(p3);
+            p2.connect(p3);
+            p1.freeze();
+            p2.freeze();
             p1.flow([{
                 filename: 'a.js'
             }]).then(() => p2.flow([{
@@ -100,6 +108,7 @@ describe('stream', () => {
             const f = {
                 filename: 'a.js'
             };
+            p1.freeze();
             p1.notify(f).then(ft => {
                 f.filename = 'b.js';
                 assert.deepEqual(ft[0].filename, 'a.js');
@@ -140,7 +149,7 @@ describe('stream', () => {
                     }
                 }
             }
-            new PantoStream(new NilTransformer()).flow([{
+            new PantoStream(new NilTransformer()).freeze().flow([{
                 filename: 'a.js'
             }]).then(files => {
                 assert.deepEqual(files, [])

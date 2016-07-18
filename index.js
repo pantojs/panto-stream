@@ -27,6 +27,7 @@ class PantoStream extends EventEmitter {
     constructor(transformer) {
         super();
         this._parentsCount = 0;
+        this._isFrozen = false;
         defineFrozenProperty(this, '_children', []);
         defineFrozenProperty(this, '_transformer', transformer);
         defineFrozenProperty(this, '_cacheFiles', new Map());
@@ -37,6 +38,11 @@ class PantoStream extends EventEmitter {
         if (!child || !(child instanceof PantoStream)) {
             throw new TypeError(`Should connect to an instance of PantoStream, not ${typeof child}`);
         }
+
+        if(this._isFrozen || child._isFrozen) {
+            throw new Error('Could not connect when frozen');
+        }
+
         child._parentsCount += 1;
         this._children.push({
             child,
@@ -61,6 +67,8 @@ class PantoStream extends EventEmitter {
         this._children.forEach(({
             child
         }) => child.freeze());
+
+        this._isFrozen = true;
         return this;
     }
     reset() {
@@ -79,6 +87,10 @@ class PantoStream extends EventEmitter {
         return this;
     }
     flow(files) {
+
+        if (!this._isFrozen) {
+            throw new Error(`Should be frozen before flowing`);
+        }
 
         if (0 !== this._parentsCount) {
             return Promise.resolve([]);
