@@ -120,7 +120,8 @@ describe('stream', () => {
             class TestTransformer extends Transformer {
                 _transform(file) {
                     invoked += 1;
-                    return super._transform(file);
+                    file.content += 'a';
+                    return Promise.resolve(file);
                 }
                 isTorrential() {
                     return false;
@@ -134,8 +135,13 @@ describe('stream', () => {
             p1.connect(p2).connect(p3).connect(p4);
             p1.freeze();
             p1.flow([{
-                filename: 'a.js'
-            }]).then(() => {
+                filename: 'a.js',
+                content: 'a'
+            }]).then(files => {
+                assert.deepEqual(files, [{
+                    filename: 'a.js',
+                    content: 'aaaaa'
+                }]);
                 assert.deepEqual(invoked, 4);
             }).then(() => done()).catch(e => console.error(e));
         });

@@ -8,6 +8,7 @@
  * 2016-07-12[13:45:39]:remove merge
  * 2016-07-12[14:17:40]:compatible with old transformer
  * 2016-07-18[19:25:39]:new apis supporting topology
+ * 2016-07-19[01:33:20]:use disk map
  *
  * @author yanni4night@gmail.com
  * @version 0.6.0
@@ -15,12 +16,9 @@
  */
 'use strict';
 const EventEmitter = require('events');
-const {
-    filter,
-    flattenDeep,
-    cloneDeep
-} = require('lodash');
+const {filter, flattenDeep, cloneDeep} = require('lodash');
 const defineFrozenProperty = require('define-frozen-property');
+const FileContentCacher = require('./file-content-cacher');
 
 /** Class representing a stream. */
 class PantoStream extends EventEmitter {
@@ -30,7 +28,7 @@ class PantoStream extends EventEmitter {
         this._isFrozen = false;
         defineFrozenProperty(this, '_children', []);
         defineFrozenProperty(this, '_transformer', transformer);
-        defineFrozenProperty(this, '_cacheFiles', new Map());
+        defineFrozenProperty(this, '_cacheFiles', new FileContentCacher());
         defineFrozenProperty(this, '_filesToFlow', []);
         defineFrozenProperty(this, '_dependencies', []);
     }
