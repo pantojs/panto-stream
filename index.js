@@ -9,9 +9,10 @@
  * 2016-07-12[14:17:40]:compatible with old transformer
  * 2016-07-18[19:25:39]:new apis supporting topology
  * 2016-07-19[01:33:20]:use disk map
+ * 2016-07-19[17:34:12]:add pipe
  *
  * @author yanni4night@gmail.com
- * @version 0.6.0
+ * @version 0.6.1
  * @since 0.1.0
  */
 'use strict';
@@ -48,6 +49,9 @@ class PantoStream extends EventEmitter {
         });
 
         return child;
+    }
+    pipe(transformer, mergeFiles = true) {
+        return this.connect(new PantoStream(transformer),mergeFiles);
     }
     notify(...files) {
         this._filesToFlow.push(...files);

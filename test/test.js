@@ -6,7 +6,7 @@
  * 2016-07-05[23:18:22]:revised
  *
  * @author yanni4night@gmail.com
- * @version 0.6.0
+ * @version 0.6.1
  * @since 0.1.0
  */
 'use strict';
@@ -35,6 +35,12 @@ describe('stream', () => {
         it('should return child', done => {
             const ps = new PantoStream();
             assert.deepEqual(ps, new PantoStream().connect(ps));
+            done();
+        });
+    });
+    describe('#pipe', () => {
+        it('should work as #connect', done => {
+            new PantoStream().pipe(new Transformer());
             done();
         });
     });
