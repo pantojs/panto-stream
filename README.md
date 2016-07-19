@@ -17,6 +17,7 @@ read.freeze().flow(...files);
 
 ## apis
  - connect(stream, mergeFiles)
+ - pipe(transformer, mergeFiles)
  - notify(...files)
  - freeze()
  - reset()

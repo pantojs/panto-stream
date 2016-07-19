@@ -33,6 +33,17 @@ class PantoStream extends EventEmitter {
         defineFrozenProperty(this, '_filesToFlow', []);
         defineFrozenProperty(this, '_dependencies', []);
     }
+    /**
+     * Treat "child" as a son descendant.
+     * Use "connect" to build a network.
+     * When a stream flows completly, it will
+     * notify its children, give them the result
+     * if requires.
+     * 
+     * @param  {PantoStream}  child
+     * @param  {Boolean} mergeFiles If "child" need my result
+     * @return {PantoStream} child
+     */
     connect(child, mergeFiles = true) {
         if (!child || !(child instanceof PantoStream)) {
             throw new TypeError(`Should connect to an instance of PantoStream, not ${typeof child}`);
