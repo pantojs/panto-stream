@@ -10,12 +10,15 @@ const read = new Stream(new ReadTransformer());
 const babel = new Stream(new BabelTransformer());
 const uglify = new Stream(new UglifyTransformer());
 
-read.connect(babel).connect(uglify);
+read.tag('read').connect(babel).connect(uglify);
+
+uglify.pipe(new WriteTransformer());
 
 read.freeze().flow(...files);
 ```
 
-## apis
+## API
+ - tag(string)
  - connect(stream, mergeFiles)
  - pipe(transformer, mergeFiles)
  - notify(...files)

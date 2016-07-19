@@ -19,6 +19,19 @@ require('panto');
 /*global describe,it*/
 /*eslint no-console: ["error", { allow: ["error"] }] */
 describe('stream', () => {
+    describe('#tag', () => {
+        it('should set tag', () => {
+            const s = new PantoStream();
+            assert.deepEqual(s.tag('s'), s);
+            assert.deepEqual(String(s.tag), 's');
+        });
+        it('should throw error if tag is illegal', () => {
+            const s = new PantoStream();
+            assert.throws(() => {
+                s.tag({});
+            });
+        });
+    });
     describe('#connect', () => {
         it('should throw error if connects a non-stream', done => {
             assert.throws(() => {

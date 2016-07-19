@@ -17,7 +17,7 @@
  */
 'use strict';
 const EventEmitter = require('events');
-const {filter, flattenDeep, cloneDeep} = require('lodash');
+const {filter, flattenDeep, cloneDeep, isString} = require('lodash');
 const defineFrozenProperty = require('define-frozen-property');
 const FileContentCacher = require('./file-content-cacher');
 
@@ -25,8 +25,39 @@ const FileContentCacher = require('./file-content-cacher');
 class PantoStream extends EventEmitter {
     constructor(transformer) {
         super();
-        this._parentsCount = 0;
-        this._isFrozen = false;
+        
+        let _tag;
+
+        const setTag = tag => {
+            if (!isString(tag)) {
+                throw new Error('"tag" should be a string');
+            }
+            _tag = tag;
+            return this;
+        };
+
+        setTag.toString = () => _tag;
+
+        Object.defineProperties(this, {
+            '_parentsCount': {
+                value: 0,
+                configurable: false,
+                enumerable: false,
+                writable: true
+            },
+            '_isFrozen': {
+                value: false,
+                configurable: false,
+                enumerable: false,
+                writable: true
+            },
+            'tag': {
+                get(){
+                    return setTag;
+                } 
+            }
+        });
+
         defineFrozenProperty(this, '_children', []);
         defineFrozenProperty(this, '_transformer', transformer);
         defineFrozenProperty(this, '_cacheFiles', new FileContentCacher());
