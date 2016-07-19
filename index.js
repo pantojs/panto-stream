@@ -61,9 +61,25 @@ class PantoStream extends EventEmitter {
 
         return child;
     }
+    /**
+     * Similar with connect, but receives transformer
+     * instead of stream.
+     * 
+     * @param  {PantoTransformer}  transformer
+     * @param  {Boolean} mergeFiles
+     * @return {PantoStream}
+     */
     pipe(transformer, mergeFiles = true) {
         return this.connect(new PantoStream(transformer),mergeFiles);
     }
+    /**
+     * Be notified that an ancestor has complete flowing.
+     *
+     * If all the ancestors are complete, just flow self.
+     * 
+     * @param  {...object} files Result of ancestor
+     * @return {Promise} this flows
+     */
     notify(...files) {
         this._filesToFlow.push(...files);
         this._parentsCount -= 1;
@@ -71,8 +87,14 @@ class PantoStream extends EventEmitter {
             this._parentsCount = 0;
         }
         return this.flow();
-
     }
+    /**
+     * Freeze self and all the descendants.
+     * 
+     * Stream cannot connect or be connected if frozen.
+     * 
+     * @return {PantoStream} this
+     */
     freeze() {
         if (!('_parentsTotalCount' in this)) {
             defineFrozenProperty(this, '_parentsTotalCount', this._parentsCount);
@@ -84,13 +106,26 @@ class PantoStream extends EventEmitter {
         this._isFrozen = true;
         return this;
     }
+    /**
+     * Reset flowing status.
+     * You do not need to call this.
+     * 
+     * @return {this}
+     */
     reset() {
         this._filesToFlow.splice(0);
         this._parentsCount = this._parentsTotalCount;
 
         return this;
-
     }
+    /**
+     * Clear cache of some files.
+     *
+     * Cached files won't flow to non-torrential transformer.
+     * 
+     * @param  {...string} filenames
+     * @return {PantoStream} this
+     */
     clearCache(...filenames) {
         filenames.forEach(filename => this._cacheFiles.delete(filename));
         this._children.forEach(({
@@ -99,8 +134,13 @@ class PantoStream extends EventEmitter {
 
         return this;
     }
+    /**
+     * Flow files. Stream has to be frozen when flows.
+     * 
+     * @param  {Array} files
+     * @return {Promise}
+     */
     flow(files) {
-
         if (!this._isFrozen) {
             throw new Error(`Should be frozen before flowing`);
         }
@@ -108,7 +148,7 @@ class PantoStream extends EventEmitter {
         if (0 !== this._parentsCount) {
             return Promise.resolve([]);
         }
-
+        // MUST IMMUTABLE
         const filesToFlow = cloneDeep(files || this._filesToFlow);
 
         let retPromise;
@@ -151,7 +191,7 @@ class PantoStream extends EventEmitter {
                 }
             })) : files;
         }).then(flattenDeep);
-
+        // Automate reset
         this.reset();
 
         return ret;
