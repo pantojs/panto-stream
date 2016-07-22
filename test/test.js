@@ -39,25 +39,30 @@ describe('stream', () => {
             });
             done();
         });
-        it('should throw error when frozen', done => {
+        it('should throw error when frozen', () => {
             assert.throws(() => {
                 new PantoStream().freeze().connect(new PantoStream());
             });
-            done();
         });
-        it('should throw error when connect more than once', done => {
+        it('should throw error when connect more than once', () => {
             assert.throws(() => {
                 const p1 = new PantoStream();
                 const p2 = new PantoStream();
                 p1.connect(p2);
                 p1.connect(p2);
             });
-            done();
         });
-        it('should return child', done => {
+        it('should throw error when connect each other', () => {
+            assert.throws(() => {
+                const p1 = new PantoStream();
+                const p2 = new PantoStream();
+                p1.connect(p2);
+                p2.connect(p1);
+            });
+        });
+        it('should return child', () => {
             const ps = new PantoStream();
             assert.deepEqual(ps, new PantoStream().connect(ps));
-            done();
         });
     });
     describe('#isConnectedWith', () => {
