@@ -102,6 +102,20 @@ class PantoStream extends EventEmitter {
         return child;
     }
     /**
+     * If connected with child.
+     * 
+     * @param  {PantoStream}  child
+     * @return {Boolean} If connected
+     */
+    isConnectedWith(child) {
+        for (let i = 0; i < this._children.length; ++i) {
+            if (this._children[i].child === child) {
+                return true;
+            }
+        }
+        return false;
+    }
+    /**
      * Similar with connect, but receives transformer
      * instead of stream.
      * 

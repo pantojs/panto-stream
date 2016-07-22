@@ -60,6 +60,14 @@ describe('stream', () => {
             done();
         });
     });
+    describe('#isConnectedWith', () => {
+        it('should return true', () => {
+            const p1 = new PantoStream();
+            const p2 = new PantoStream();
+            p1.connect(p2);
+            assert.ok(p1.isConnectedWith(p2));
+        });
+    });
     describe('#pipe', () => {
         it('should work as #connect', done => {
             new PantoStream().pipe(new Transformer());
