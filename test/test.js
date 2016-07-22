@@ -6,7 +6,7 @@
  * 2016-07-05[23:18:22]:revised
  *
  * @author yanni4night@gmail.com
- * @version 0.6.1
+ * @version 0.6.2
  * @since 0.1.0
  */
 'use strict';
@@ -205,22 +205,22 @@ describe('stream', () => {
         });
         it(
             `
-    0------►1------►2-------►3-----------
-    |               |                   |
-    |               |                   |
-    |               |                   ▼
-    |------►4------►5--------10--------►12
-    |               |        ▲          ▲
-    |               |        |          |
-    |               6        |          |
-    |               |        |          |
-    |               |        |          |
-    |------►8-------o-------►9          |
-                    |        |          |
-                    |        |          |
-                    |        ▼          |
-                    |-------►7---------►11
-             `,
+        0------►1------►2-------►3-----------
+        |               |                   |
+        |               |                   |
+        ▼               ▼                   ▼
+        |------►4------►5--------10--------►12
+        |               |        ▲          ▲
+        |               ▼        |          |
+        |               6        |          |
+        |               |        |          |
+        |               ▼        |          |
+        |------►8-------o-------►9          |
+                        |        |          |
+                        |        |          |
+                        ▼        ▼          |
+                        |-------►7---------►11
+`,
             done => {
 
                 const flags = [];
@@ -314,6 +314,52 @@ describe('stream', () => {
                     ]);
                 }).then(() => done()).catch(e => console.error(e));
             });
+        it('should clear cache after a torrential', done => {
+            class TorrentialTransformer extends Transformer {
+                transformAll(files) {
+                    let content = '';
+
+                    files.forEach(file => {
+                        content += file.content;
+                    });
+
+                    return Promise.resolve([{
+                        filename: 'bundle.js',
+                        content
+                    }]);
+                }
+                isTorrential() {
+                    return true;
+                }
+            }
+
+            const p1 = new PantoStream();
+
+            p1.pipe(new TorrentialTransformer()).pipe(new Transformer());
+
+            p1.freeze();
+            p1.flow([{
+                filename: 'a.js',
+                content: 'a'
+            }, {
+                filename: 'b.js',
+                content: 'b'
+            }]).then(files => {
+                assert.deepEqual(files, [{
+                    filename: 'bundle.js',
+                    content: 'ab'
+                }]);
+                return p1.flow([{
+                    filename: 'a.js',
+                    content: 'a'
+                }]);
+            }).then(files => {
+                assert.deepEqual(files, [{
+                    filename: 'bundle.js',
+                    content: 'a'
+                }]);
+            }).then(() => done()).catch(e => console.error(e));
+        });
     });
     describe('#reset', () => {
         it('should reset after flow', done => {

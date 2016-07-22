@@ -1,6 +1,6 @@
 {
   "name": "panto-stream",
-  "version": "0.6.1",
+  "version": "0.6.2",
   "description": "Stream for panto",
   "main": "index.js",
   "directories": {
@@ -14,7 +14,7 @@
     "coveralls": "^2.11.9",
     "mocha": "^2.5.3",
     "mocha-lcov-reporter": "^1.2.0",
-    "panto": "0.0.20",
+    "panto": "0.0.24",
     "panto-transformer": "^0.2.2",
     "pre-commit": "^1.1.3"
   },
