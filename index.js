@@ -86,6 +86,10 @@ class PantoStream extends EventEmitter {
             throw new Error('Could not connect when frozen');
         }
 
+        if(child.isConnectedWith(this)) {
+            throw new Error(`${child} has already connected with ${this}`);
+        }
+
         this._children.forEach(ch => {
             if (ch.child === child) {
                 throw new Error(`${this} connects to ${ch} more than once`);
