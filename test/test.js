@@ -45,6 +45,15 @@ describe('stream', () => {
             });
             done();
         });
+        it('should throw error when connect more than once', done => {
+            assert.throws(() => {
+                const p1 = new PantoStream();
+                const p2 = new PantoStream();
+                p1.connect(p2);
+                p1.connect(p2);
+            });
+            done();
+        });
         it('should return child', done => {
             const ps = new PantoStream();
             assert.deepEqual(ps, new PantoStream().connect(ps));
