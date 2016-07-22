@@ -11,9 +11,10 @@
  * 2016-07-19[01:33:20]:use disk map
  * 2016-07-19[17:34:12]:add pipe
  * 2016-07-22[11:23:37]:clear cache if torrential
+ * 2016-07-23[02:04:57]:children flow in defined order
  *
  * @author yanni4night@gmail.com
- * @version 0.6.2
+ * @version 0.6.3
  * @since 0.1.0
  */
 'use strict';
@@ -102,7 +103,7 @@ class PantoStream extends EventEmitter {
      * @return {PantoStream}
      */
     pipe(transformer, mergeFiles = true) {
-        return this.connect(new PantoStream(transformer),mergeFiles);
+        return this.connect(new PantoStream(transformer), mergeFiles);
     }
     /**
      * Be notified that an ancestor has complete flowing.
@@ -215,17 +216,35 @@ class PantoStream extends EventEmitter {
             retPromise = flowOutOfTorrential(filesToFlow);
         }
         const ret = retPromise.then(filter).then(flattenDeep).then(files => {
-            return this._children.length ? Promise.all(this._children.map(({
-                child,
-                mergeFiles
-            }) => {
-                if (mergeFiles) {
-                    return child.notify(...files);
-                } else {
-                    return child.notify();
-                }
-            })) : files;
+            if (!this._children.length) {
+                return files;
+            }
+
+            return new Promise((resolve, reject) => {
+                let childIdx = 0;
+                const results = [];
+                
+                const fn = () => {
+                    if (childIdx === this._children.length) {
+                        return resolve(results);
+                    }
+
+                    const {
+                        child,
+                        mergeFiles
+                    } = this._children[childIdx];
+
+                    child.notify(...(mergeFiles ? files : [])).then(files => {
+                        results.push(files);
+                        fn();
+                    }).catch(reject);
+                    childIdx += 1;
+                };
+                fn();
+            });
+
         }).then(flattenDeep);
+
         // Automate reset
         this.reset();
 

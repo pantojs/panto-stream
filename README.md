@@ -4,17 +4,51 @@
 Stream for panto.
 
 ```js
+/**
+
+
+🚴read(.js)------►filter(src/*.js)-------►babel--------
+    |                                                |
+    |                                                |
+    |                                                |
+    |                                                ▼
+    |------------►filter(3rd/*.js)----------------►uglify
+    |                                                |
+    |                                                |
+    |                                                |
+    |                                                ▼
+    |             🏅write◄--------uglify◄--------browserify
+    |                                 |
+    |                                 |
+    |                                 |
+    |                                 ▼
+ filter(.html)--------------------►replace---------🎖write
+*/
 const PantoStream = ('panto-stream');
 
-const read = new Stream(new ReadTransformer());
-const babel = new Stream(new BabelTransformer());
-const uglify = new Stream(new UglifyTransformer());
+const origin = new PantoStream();
+const read = new ReadTransformer();
+const babel = new BabelTransformer();
+const browserify = new BrowserifyTransformer();
+const uglify = new UglifyTransformer();
+const replace = new ReplaceTransformer();
+const write = new WriteTransformer();
+const filter = function(pattner) {
+    return new FilterTransformer(pattern)
+};
 
-read.tag('read').connect(babel).connect(uglify);
+origin.pipe(read);
 
-uglify.pipe(new WriteTransformer());
+read.pipe(filter('src/*.js')).pipe(babel).pipe(browserify);
+read.pipe(filter('3rd/*.js')).pipe(browserify)
 
-read.freeze().flow(...files);
+read.pipe(filter('*.html')).pipe(replace);
+
+browserify.pipe(uglify).pipe(write);
+
+uglify.pipe(replace, false).pipe(write)
+
+origin.freeze().flow([{filename, content}, {filename, content}]).then(files => {});
 ```
 
 ## API
