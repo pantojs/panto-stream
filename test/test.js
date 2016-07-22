@@ -6,7 +6,7 @@
  * 2016-07-05[23:18:22]:revised
  *
  * @author yanni4night@gmail.com
- * @version 0.6.2
+ * @version 0.6.3
  * @since 0.1.0
  */
 'use strict';
@@ -209,17 +209,17 @@ describe('stream', () => {
         |               |                   |
         |               |                   |
         ▼               ▼                   ▼
-        |------►4------►5--------10--------►12
+        |------►4------►5-------►10--------►12
         |               |        ▲          ▲
         |               ▼        |          |
         |               6        |          |
         |               |        |          |
         |               ▼        |          |
-        |------►8-------o-------►9          |
+        |------►7-------o-------►8          |
                         |        |          |
                         |        |          |
                         ▼        ▼          |
-                        |-------►7---------►11
+                        |-------►9---------►11
 `,
             done => {
 
@@ -280,37 +280,43 @@ describe('stream', () => {
                 }));
 
                 p0.connect(p1).connect(p2).connect(p3).connect(p12);
-                p0.connect(p4).connect(p5).connect(p10).connect(p12);
-                p2.connect(p5).connect(p6).connect(p7).connect(p11).connect(p12);
-                p0.connect(p8).connect(p9).connect(p10);
-                p9.connect(p7, false);
+                p2.connect(p5);
+                p0.connect(p4).connect(p5).connect(p6).connect(p9);
+                p5.connect(p10);
+                p0.connect(p7).connect(p8).connect(p9);
+                p8.connect(p10).connect(p12);
+                p9.connect(p11).connect(p12);
 
                 p0.freeze();
                 p0.flow([{
                     filename: 'a.js',
                     content: ''
                 }]).then(files => {
+
                     assert.deepEqual(files, [{
                         filename: 'a.js',
                         content: ',0,1,2,3,12'
                     }, {
                         filename: 'a.js',
-                        content: ',0,8,9,10,12'
+                        content: ',0,1,2,5,6,9,11,12'
                     }, {
                         filename: 'a.js',
-                        content: ',0,4,5,10,12'
+                        content: ',0,4,5,6,9,11,12'
+                    }, {
+                        filename: 'a.js',
+                        content: ',0,7,8,9,11,12'
                     }, {
                         filename: 'a.js',
                         content: ',0,1,2,5,10,12'
                     }, {
                         filename: 'a.js',
-                        content: ',0,4,5,6,7,11,12'
+                        content: ',0,4,5,10,12'
                     }, {
                         filename: 'a.js',
-                        content: ',0,1,2,5,6,7,11,12'
+                        content: ',0,7,8,10,12'
                     }]);
-                    assert.deepEqual(flags, ['0', '1', '4', '8', '2', '9', '3', '5', '10',
-                        '6', '7', '11', '12'
+                    assert.deepEqual(flags, ['0', '1', '2', '3', '4', '5', '6', '7', '8',
+                        '9', '11', '10', '12'
                     ]);
                 }).then(() => done()).catch(e => console.error(e));
             });
@@ -359,6 +365,46 @@ describe('stream', () => {
                     content: 'a'
                 }]);
             }).then(() => done()).catch(e => console.error(e));
+        });
+        it('should flow in defined order', done => {
+            class AopTransformer extends Transformer {
+                _transform(file) {
+                    return new Promise(resolve => {
+                        setTimeout(() => {
+                            this.options.aop.call(file, file);
+                            resolve(file);
+                        }, this.options.timeout);
+                    });
+                }
+                isTorrential() {
+                    return false;
+                }
+            }
+            const p1 = new PantoStream();
+
+            const p2 = p1.connect(new PantoStream());
+
+            let p2Injected = false;
+
+            p2.pipe(new AopTransformer({
+                timeout: 500,
+                aop: () => {
+                    p2Injected = true;
+                }
+            }));
+
+            p2.pipe(new AopTransformer({
+                timeout: 200,
+                aop: () => {
+                    assert.ok(p2Injected);
+                    done()
+                }
+            }));
+
+            p1.freeze();
+            p1.flow([{
+                filename: 'a.js'
+            }]);
         });
     });
     describe('#reset', () => {
