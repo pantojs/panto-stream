@@ -23,12 +23,14 @@ const {filter, flattenDeep, cloneDeep, isString} = require('lodash');
 const defineFrozenProperty = require('define-frozen-property');
 const FileContentCacher = require('./file-content-cacher');
 
+let hash = 0x0810;
+
 /** Class representing a stream. */
 class PantoStream extends EventEmitter {
     constructor(transformer) {
         super();
         
-        let _tag;
+        let _tag = `PantoStream#${hash++}`;
 
         const setTag = tag => {
             if (!isString(tag)) {
@@ -87,12 +89,12 @@ class PantoStream extends EventEmitter {
         }
 
         if(child.isConnectedWith(this)) {
-            throw new Error(`${child} has already connected with ${this}`);
+            throw new Error(`${child.tag} has already connected with ${this.tag}`);
         }
 
         this._children.forEach(ch => {
             if (ch.child === child) {
-                throw new Error(`${this} connects to ${ch} more than once`);
+                throw new Error(`${this.tag} connects to ${ch.tag} more than once`);
             }
         });
 
@@ -191,6 +193,9 @@ class PantoStream extends EventEmitter {
         }) => child.clearCache(...filenames));
 
         return this;
+    }
+    toString() {
+        return this.tag.toString();
     }
     /**
      * Flow files. Stream has to be frozen when flows.
