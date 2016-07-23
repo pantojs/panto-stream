@@ -492,4 +492,14 @@ describe('stream', () => {
             }).then(() => done()).catch(e => console.error(e));
         });
     });
+    describe('#toString', () => {
+        it('should return tag ', () => {
+            const p1 = new PantoStream().tag('x');
+            assert.deepEqual(p1.toString(), 'x');
+        });
+        it('should return inspect ', () => {
+            const p1 = new PantoStream();
+            assert.ok(`${p1}`);
+        });
+    });
 });
