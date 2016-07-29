@@ -462,9 +462,6 @@ describe('stream', () => {
                     }
                     return super._transform(file);
                 }
-                isTorrential() {
-                    return false;
-                }
             }
 
             const p1 = new PantoStream();
@@ -476,19 +473,57 @@ describe('stream', () => {
             p2.connect(p4);
             p1.freeze();
             p1.flow([{
-                filename: 'a.js'
+                filename: 'a.js',
+                content: 'a'
             }, {
-                filename: 'b.js'
+                filename: 'b.js',
+                content: 'b'
             }]).then(() => {
-                p1.reset().clearCache('a.js');
                 return p1.flow([{
-                    filename: 'a.js'
+                    filename: 'a.js',
+                    content: 'aa'
                 }, {
-                    filename: 'b.js'
+                    filename: 'b.js',
+                    content: 'b'
                 }]);
             }).then(() => {
                 assert.deepEqual(invokedA, 2);
                 assert.deepEqual(invokedB, 1);
+            }).then(() => done()).catch(e => console.error(e));
+        });
+        it('should clear cache dependencies', done => {
+            class TestTransformer extends Transformer {
+                _transform(file) {
+                    return Promise.resolve([file, {
+                        filename: 'x.js',
+                        content: file.content
+                    }]);
+                }
+            }
+            const p1 = new PantoStream();
+            const p2 = new PantoStream(new TestTransformer());
+            const p3 = new PantoStream(new Transformer());
+
+            p1.connect(p2).connect(p3);
+
+            p1.freeze();
+
+            p1.flow([{
+                filename: 'a.js',
+                content: 'a'
+            }]).then(files => {
+                return p1.flow([{
+                    filename: 'b.js',
+                    content: 'b'
+                }]);
+            }).then(files => {
+                assert.deepEqual(files, [{
+                    filename: 'b.js',
+                    content: 'b'
+                }, {
+                    filename: 'x.js',
+                    content: 'b'
+                }]);
             }).then(() => done()).catch(e => console.error(e));
         });
     });

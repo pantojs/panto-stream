@@ -58,8 +58,8 @@ origin.freeze().flow([{filename, content}, {filename, content}]).then(files => {
  - notify(...files)
  - freeze()
  - reset()
- - clearCache(...filesname)
  - flow(files)
+ - isConnectedWith(stream)
 
 [npm-url]: https://npmjs.org/package/panto-stream
 [downloads-image]: http://img.shields.io/npm/dm/panto-stream.svg

@@ -12,9 +12,10 @@
  * 2016-07-19[17:34:12]:add pipe
  * 2016-07-22[11:23:37]:clear cache if torrential
  * 2016-07-23[02:04:57]:children flow in defined order
+ * 2016-07-29[18:07:01]:remove clearCache
  *
  * @author yanni4night@gmail.com
- * @version 0.6.3
+ * @version 0.7.0
  * @since 0.1.0
  */
 'use strict';
@@ -22,6 +23,16 @@ const EventEmitter = require('events');
 const {filter, flattenDeep, cloneDeep, isString} = require('lodash');
 const defineFrozenProperty = require('define-frozen-property');
 const FileContentCacher = require('./file-content-cacher');
+const crypto = require('crypto');
+/**
+ * md5
+ * 
+ * @param  {Buffer|String} content
+ * @return {String}
+ */
+const digest = (content = '') => {
+    return crypto.createHash('md5').update(content).digest('hex');
+};
 
 let hash = 0x0810;
 
@@ -179,21 +190,10 @@ class PantoStream extends EventEmitter {
         return this;
     }
     /**
-     * Clear cache of some files.
-     *
-     * Cached files won't flow to non-torrential transformer.
+     * To string
      * 
-     * @param  {...string} filenames
-     * @return {PantoStream} this
+     * @return {String}
      */
-    clearCache(...filenames) {
-        filenames.forEach(filename => this._cacheFiles.delete(filename));
-        this._children.forEach(({
-            child
-        }) => child.clearCache(...filenames));
-
-        return this;
-    }
     toString() {
         return this.tag.toString();
     }
@@ -216,19 +216,18 @@ class PantoStream extends EventEmitter {
 
         let retPromise;
 
-        const flowInTorrential = files => this._transformer.transformAll(files).then(files => {
-            files.forEach(file => this.clearCache(file.filename));
-            return files;
-        });
+        const flowInTorrential = files => this._transformer.transformAll(files);
 
         const flowOutOfTorrential = files => {
             return Promise.all(files.map(file => {
-                if (this._cacheFiles.has(file.filename)) {
-                    return Promise.resolve(this._cacheFiles.get(file.filename));
+                const md5 = digest(file.content);
+                
+                if (this._cacheFiles.has(md5)) {
+                    return Promise.resolve(this._cacheFiles.get(md5));
                 } else {
                     return this._transformer.transform(file).then(tfile => {
                         if (tfile) {
-                            this._cacheFiles.set(file.filename, cloneDeep(tfile));
+                            this._cacheFiles.set(md5, cloneDeep(tfile));
                         }
                         return tfile;
                     });
