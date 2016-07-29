@@ -15,12 +15,12 @@
  * 2016-07-29[18:07:01]:remove clearCache
  *
  * @author yanni4night@gmail.com
- * @version 0.7.0
+ * @version 0.7.1
  * @since 0.1.0
  */
 'use strict';
 const EventEmitter = require('events');
-const {filter, flattenDeep, cloneDeep, isString} = require('lodash');
+const {filter, flattenDeep, cloneDeep, isString, isNil} = require('lodash');
 const defineFrozenProperty = require('define-frozen-property');
 const FileContentCacher = require('./file-content-cacher');
 const crypto = require('crypto');
@@ -28,9 +28,17 @@ const crypto = require('crypto');
  * md5
  * 
  * @param  {Buffer|String} content
- * @return {String}
+ * @return {String|Symbol}
  */
-const digest = (content = '') => {
+const digest = content => {
+    if (isNil(content)) {
+        return 0;
+    }
+
+    if (!isString(content) && !Buffer.isBuffer(content)) {
+        return Symbol();
+    }
+
     return crypto.createHash('md5').update(content).digest('hex');
 };
 
