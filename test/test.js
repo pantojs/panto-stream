@@ -19,6 +19,48 @@ require('panto');
 /*global describe,it*/
 /*eslint no-console: ["error", { allow: ["error"] }] */
 describe('stream', () => {
+    describe('#constructor', () => {
+        it('cacheable=true works', done => {
+            let invoked = 0;
+            class TestTransformer extends Transformer {
+                _transform(file) {
+                    invoked += 1;
+                    return super._transform(file);
+                }
+            }
+            const s = new PantoStream(new TestTransformer(), true);
+
+            s.freeze();
+            s.flow([{
+                filename: 'a.js',
+                content: 'a'
+            }]).then(files => {
+                return s.flow(files);
+            }).then(() => {
+                assert.deepEqual(invoked, 1);
+            }).then(() => done()).catch(e => console.error(e));
+        });
+        it('cacheable=false works', done => {
+            let invoked = 0;
+            class TestTransformer extends Transformer {
+                _transform(file) {
+                    invoked += 1;
+                    return super._transform(file);
+                }
+            }
+            const s = new PantoStream(new TestTransformer(), false);
+
+            s.freeze();
+            s.flow([{
+                filename: 'a.js',
+                content: 'a'
+            }]).then(files => {
+                return s.flow(files);
+            }).then(() => {
+                assert.deepEqual(invoked, 2);
+            }).then(() => done()).catch(e => console.error(e));
+        });
+    });
     describe('#tag', () => {
         it('should set tag', () => {
             const s = new PantoStream();

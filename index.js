@@ -38,7 +38,7 @@ let hash = 0x0810;
 
 /** Class representing a stream. */
 class PantoStream extends EventEmitter {
-    constructor(transformer) {
+    constructor(transformer, cacheable = true) {
         super();
         
         let _tag = `PantoStream#${hash++}`;
@@ -73,6 +73,7 @@ class PantoStream extends EventEmitter {
             }
         });
 
+        defineFrozenProperty(this, '_cacheable', !!cacheable);
         defineFrozenProperty(this, '_children', []);
         defineFrozenProperty(this, '_transformer', transformer);
         defineFrozenProperty(this, '_cacheFiles', new FileContentCacher());
@@ -222,11 +223,11 @@ class PantoStream extends EventEmitter {
             return Promise.all(files.map(file => {
                 const md5 = digest(file.content);
                 
-                if (this._cacheFiles.has(md5)) {
+                if (this._cacheable && this._cacheFiles.has(md5)) {
                     return Promise.resolve(this._cacheFiles.get(md5));
                 } else {
                     return this._transformer.transform(file).then(tfile => {
-                        if (tfile) {
+                        if (this._cacheable && tfile) {
                             this._cacheFiles.set(md5, cloneDeep(tfile));
                         }
                         return tfile;

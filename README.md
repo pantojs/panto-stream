@@ -3,6 +3,8 @@
 
 Stream for panto.
 
+`v0.7.0` breaking change: _clearCache_ is removed.
+
 ```js
 /**
 
@@ -52,6 +54,7 @@ origin.freeze().flow([{filename, content}, {filename, content}]).then(files => {
 ```
 
 ## API
+ - constructor(transformer, cacheable)
  - tag(string)
  - connect(stream, mergeFiles)
  - pipe(transformer, mergeFiles)
