@@ -16,7 +16,7 @@
  * 2016-07-30[09:13:29]:use cacheable of transformer
  *
  * @author yanni4night@gmail.com
- * @version 0.7.2
+ * @version 0.7.4
  * @since 0.1.0
  */
 'use strict';
@@ -163,7 +163,7 @@ class PantoStream extends EventEmitter {
      * @return {Promise} this flows
      */
     notify(...files) {
-        this._filesToFlow.push(...files);
+        this._filesToFlow.push(...cloneDeep(files));
         this._parentsCount -= 1;
         if (this._parentsCount < 0) {
             this._parentsCount = 0;
@@ -222,8 +222,8 @@ class PantoStream extends EventEmitter {
         if (0 !== this._parentsCount) {
             return Promise.resolve([]);
         }
-        // MUST IMMUTABLE
-        const filesToFlow = cloneDeep(files || this._filesToFlow);
+
+        const filesToFlow = files || this._filesToFlow;
 
         let retPromise;
 
@@ -285,10 +285,12 @@ class PantoStream extends EventEmitter {
 
         }).then(flattenDeep);
 
-        // Automate reset
-        this.reset();
+        return ret.then(files => {
+            // Automate reset
+            this.reset();
 
-        return ret;
+            return files;
+        });
     }
 }
 

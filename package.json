@@ -1,6 +1,6 @@
 {
   "name": "panto-stream",
-  "version": "0.7.3",
+  "version": "0.7.4",
   "description": "Stream for panto",
   "main": "index.js",
   "directories": {
