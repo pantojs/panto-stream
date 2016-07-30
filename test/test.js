@@ -131,7 +131,7 @@ describe('stream', () => {
         it('should return self', done => {
             const ps = new PantoStream();
             ps.freeze();
-            assert.ok(ps.notify() instanceof Promise);
+            assert.ok(ps.notify([]) instanceof Promise);
             done();
         });
     });
@@ -198,7 +198,7 @@ describe('stream', () => {
                 filename: 'a.js'
             };
             p1.freeze();
-            p1.notify(f).then(ft => {
+            p1.notify([f], true).then(ft => {
                 f.filename = 'b.js';
                 assert.deepEqual(ft[0].filename, 'a.js');
             }).then(() => done()).catch(e => console.error(e));
@@ -482,9 +482,9 @@ describe('stream', () => {
             const p1 = new PantoStream();
 
             p1.freeze();
-            p1.notify({
+            p1.notify([{
                 filename: 'a.js'
-            }).then(files => {
+            }]).then(files => {
                 assert.deepEqual(files.length, 1);
                 return p1.flow();
             }).then(files => {

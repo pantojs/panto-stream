@@ -159,11 +159,16 @@ class PantoStream extends EventEmitter {
      *
      * If all the ancestors are complete, just flow self.
      * 
-     * @param  {...object} files Result of ancestor
+     * @param  {Array} files Result of ancestor
      * @return {Promise} this flows
      */
-    notify(...files) {
-        this._filesToFlow.push(...cloneDeep(files));
+    notify(files, clone) {
+        if (clone) {
+            this._filesToFlow.push(...cloneDeep(files));
+        } else {
+            this._filesToFlow.push(...files);
+        }
+
         this._parentsCount -= 1;
         if (this._parentsCount < 0) {
             this._parentsCount = 0;
@@ -273,8 +278,8 @@ class PantoStream extends EventEmitter {
                         child,
                         mergeFiles
                     } = this._children[childIdx];
-
-                    child.notify(...(mergeFiles ? files : [])).then(files => {
+                    //no transformer, no clone
+                    child.notify((mergeFiles ? files : []), !!this._transformer).then(files => {
                         results.push(files);
                         fn();
                     }).catch(reject);
