@@ -82,7 +82,7 @@ class PantoStream extends EventEmitter {
             }
         });
 
-        defineFrozenProperty(this, '_cacheable', (transformer ? (transformer.cacheable ? transformer.cacheable() : true) :
+        defineFrozenProperty(this, '_cacheable', (transformer ? (transformer.isCacheable ? transformer.isCacheable() : true) :
             false));
         defineFrozenProperty(this, '_children', []);
         defineFrozenProperty(this, '_transformer', transformer);

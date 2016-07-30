@@ -27,7 +27,7 @@ describe('stream', () => {
                     invoked += 1;
                     return super._transform(file);
                 }
-                cacheable() {
+                isCacheable() {
                     return true;
                 }
             }
@@ -50,7 +50,7 @@ describe('stream', () => {
                     invoked += 1;
                     return super._transform(file);
                 }
-                cacheable() {
+                isCacheable() {
                     return false;
                 }
             }
