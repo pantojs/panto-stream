@@ -16,7 +16,7 @@
  * 2016-07-30[09:13:29]:use cacheable of transformer
  *
  * @author yanni4night@gmail.com
- * @version 0.7.4
+ * @version 0.7.6
  * @since 0.1.0
  */
 'use strict';
@@ -82,7 +82,7 @@ class PantoStream extends EventEmitter {
             }
         });
 
-        defineFrozenProperty(this, '_cacheable', (transformer ? (transformer.isCacheable ? transformer.isCacheable() : true) :
+        defineFrozenProperty(this, '_cacheable', (transformer ? (transformer.isCacheable ? transformer.isCacheable() : false) :
             false));
         defineFrozenProperty(this, '_children', []);
         defineFrozenProperty(this, '_transformer', transformer);

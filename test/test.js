@@ -6,7 +6,7 @@
  * 2016-07-05[23:18:22]:revised
  *
  * @author yanni4night@gmail.com
- * @version 0.7.2
+ * @version 0.7.6
  * @since 0.1.0
  */
 'use strict';
@@ -509,6 +509,9 @@ describe('stream', () => {
                         invokedB += 1;
                     }
                     return super._transform(file);
+                }
+                isCacheable() {
+                    return true;
                 }
             }
 

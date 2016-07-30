@@ -54,7 +54,7 @@ origin.freeze().flow([{filename, content}, {filename, content}]).then(files => {
 ```
 
 ## API
- - constructor(transformer, cacheable)
+ - constructor(transformer)
  - tag(string)
  - connect(stream, mergeFiles)
  - pipe(transformer, mergeFiles)
