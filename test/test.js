@@ -6,7 +6,7 @@
  * 2016-07-05[23:18:22]:revised
  *
  * @author yanni4night@gmail.com
- * @version 0.6.3
+ * @version 0.7.2
  * @since 0.1.0
  */
 'use strict';
@@ -27,8 +27,11 @@ describe('stream', () => {
                     invoked += 1;
                     return super._transform(file);
                 }
+                cacheable() {
+                    return true;
+                }
             }
-            const s = new PantoStream(new TestTransformer(), true);
+            const s = new PantoStream(new TestTransformer());
 
             s.freeze();
             s.flow([{
@@ -47,9 +50,12 @@ describe('stream', () => {
                     invoked += 1;
                     return super._transform(file);
                 }
+                cacheable() {
+                    return false;
+                }
             }
-            const s = new PantoStream(new TestTransformer(), false);
-
+            const s = new PantoStream(new TestTransformer());
+            console.log(s._cacheable);
             s.freeze();
             s.flow([{
                 filename: 'a.js',

@@ -13,9 +13,10 @@
  * 2016-07-22[11:23:37]:clear cache if torrential
  * 2016-07-23[02:04:57]:children flow in defined order
  * 2016-07-29[18:07:01]:remove clearCache
+ * 2016-07-30[09:13:29]:use cacheable of transformer
  *
  * @author yanni4night@gmail.com
- * @version 0.7.1
+ * @version 0.7.2
  * @since 0.1.0
  */
 'use strict';
@@ -46,7 +47,7 @@ let hash = 0x0810;
 
 /** Class representing a stream. */
 class PantoStream extends EventEmitter {
-    constructor(transformer, cacheable = true) {
+    constructor(transformer) {
         super();
         
         let _tag = `PantoStream#${hash++}`;
@@ -81,7 +82,8 @@ class PantoStream extends EventEmitter {
             }
         });
 
-        defineFrozenProperty(this, '_cacheable', !!cacheable);
+        defineFrozenProperty(this, '_cacheable', (transformer ? (transformer.cacheable ? transformer.cacheable() : true) :
+            false));
         defineFrozenProperty(this, '_children', []);
         defineFrozenProperty(this, '_transformer', transformer);
         defineFrozenProperty(this, '_cacheFiles', new FileContentCacher());
