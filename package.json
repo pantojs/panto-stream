@@ -12,7 +12,7 @@
   },
   "devDependencies": {
     "coveralls": "^2.11.9",
-    "mocha": "^3.0.1",
+    "mocha": "^3.0.2",
     "mocha-lcov-reporter": "^1.2.0",
     "panto": "0.0.31",
     "panto-transformer": "^0.2.4",
