@@ -14,9 +14,10 @@
  * 2016-07-23[02:04:57]:children flow in defined order
  * 2016-07-29[18:07:01]:remove clearCache
  * 2016-07-30[09:13:29]:use cacheable of transformer
+ * 2016-08-19[18:43:29]:fixed missing reset if transforming failed
  *
  * @author yanni4night@gmail.com
- * @version 0.7.6
+ * @version 0.7.7
  * @since 0.1.0
  */
 'use strict';
@@ -293,8 +294,10 @@ class PantoStream extends EventEmitter {
         return ret.then(files => {
             // Automate reset
             this.reset();
-
             return files;
+        }, err => {
+            this.reset();
+            throw err;
         });
     }
 }

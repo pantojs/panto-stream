@@ -476,6 +476,31 @@ describe('stream', () => {
                 filename: 'a.js'
             }]);
         });
+        it('should reset after flow failed', done => {
+            let invoked = 0;
+            class TestTransformer extends Transformer {
+                _transform(file) {
+                    invoked += 1;
+                    return invoked == 1 ? super._transform(file) : Promise.reject(new Error(
+                        'error'));
+                }
+            }
+            const p1 = new PantoStream(new TestTransformer());
+
+            p1.freeze();
+
+            p1.notify([{
+                filename: 'a.js'
+            }]).then(files => {
+                assert.deepEqual(files.length, 1);
+                return p1.flow();
+            }).catch(() => {
+                return p1.flow();
+            }).then(files => {
+                assert.deepEqual(files.length, 0);
+                done();
+            }).catch(e => console.error(e));
+        });
     });
     describe('#reset', () => {
         it('should reset after flow', done => {
