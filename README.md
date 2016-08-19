@@ -71,7 +71,7 @@ origin.freeze().flow([{filename, content}, {filename, content}]).then(files => {
 [travis-image]: http://img.shields.io/travis/pantojs/panto-stream.svg
 [david-dm-url]:https://david-dm.org/pantojs/panto-stream
 [david-dm-image]:https://david-dm.org/pantojs/panto-stream.svg
-[david-dm-dev-url]:https://david-dm.org/pantojs/panto-stream#info=devDependencies
+[david-dm-dev-url]:https://david-dm.org/pantojs/panto-stream#type=dev
 [david-dm-dev-image]:https://david-dm.org/pantojs/panto-stream/dev-status.svg
 [coverage-image]:https://coveralls.io/repos/github/pantojs/panto-stream/badge.svg?branch=master
 [coverage-url]:https://coveralls.io/github/pantojs/panto-stream?branch=master
