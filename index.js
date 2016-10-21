@@ -17,7 +17,7 @@
  * 2016-08-19[18:43:29]:fixed missing reset if transforming failed
  *
  * @author yanni4night@gmail.com
- * @version 0.7.7
+ * @version 0.7.8
  * @since 0.1.0
  */
 'use strict';

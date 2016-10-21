@@ -55,7 +55,7 @@ describe('stream', () => {
                 }
             }
             const s = new PantoStream(new TestTransformer());
-            console.log(s._cacheable);
+
             s.freeze();
             s.flow([{
                 filename: 'a.js',
