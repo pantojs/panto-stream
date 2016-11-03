@@ -3,7 +3,6 @@
 
 Stream for panto.
 
-`v0.7.0` breaking change: _clearCache_ is removed.
 
 ```js
 /**

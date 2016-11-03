@@ -1,6 +1,6 @@
 {
   "name": "panto-stream",
-  "version": "0.7.8",
+  "version": "0.8.0",
   "description": "Stream for panto",
   "main": "index.js",
   "directories": {
@@ -14,18 +14,21 @@
     "coveralls": "^2.11.14",
     "mocha": "^3.1.2",
     "mocha-lcov-reporter": "^1.2.0",
-    "panto": "0.1.0-alpha.2",
-    "panto-transformer": "^0.2.4",
+    "panto": "^0.2.0",
+    "panto-transformer": "^0.2.5",
     "pre-commit": "^1.1.3"
   },
   "pre-commit": "test",
   "scripts": {
-    "test": "eslint index.js file-content-cacher.js && ./node_modules/.bin/mocha",
+    "test": "eslint index.js file-content-cacher.js && ./node_modules/.bin/mocha --harmony",
     "coveralls": "istanbul cover ./node_modules/mocha/bin/_mocha --report lcovonly -- -R spec && cat ./coverage/lcov.info | ./node_modules/coveralls/bin/coveralls.js && rm -rf ./coverage"
   },
   "repository": {
     "type": "git",
     "url": "https://github.com/pantojs/panto-stream.git"
+  },
+  "engines": {
+    "node": ">=7.0.0"
   },
   "keywords": [
     "panto",

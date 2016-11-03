@@ -13,14 +13,13 @@
 const assert = require('assert');
 const PantoStream = require('../');
 const Transformer = require('panto-transformer');
-const extend = require('lodash/extend');
 require('panto');
 
 /*global describe,it*/
 /*eslint no-console: ["error", { allow: ["error"] }] */
 describe('stream', () => {
     describe('#constructor', () => {
-        it('cacheable=true works', done => {
+        it('cacheable=true works', async() => {
             let invoked = 0;
             class TestTransformer extends Transformer {
                 _transform(file) {
@@ -34,16 +33,14 @@ describe('stream', () => {
             const s = new PantoStream(new TestTransformer());
 
             s.freeze();
-            s.flow([{
+            let files = await s.flow([{
                 filename: 'a.js',
                 content: 'a'
-            }]).then(files => {
-                return s.flow(files);
-            }).then(() => {
-                assert.deepEqual(invoked, 1);
-            }).then(() => done()).catch(e => console.error(e));
+            }]);
+            await s.flow(files);
+            assert.deepEqual(invoked, 1);
         });
-        it('cacheable=false works', done => {
+        it('cacheable=false works', async() => {
             let invoked = 0;
             class TestTransformer extends Transformer {
                 _transform(file) {
@@ -57,14 +54,13 @@ describe('stream', () => {
             const s = new PantoStream(new TestTransformer());
 
             s.freeze();
-            s.flow([{
+            let files = await s.flow([{
                 filename: 'a.js',
                 content: 'a'
-            }]).then(files => {
-                return s.flow(files);
-            }).then(() => {
-                assert.deepEqual(invoked, 2);
-            }).then(() => done()).catch(e => console.error(e));
+            }]);
+
+            await s.flow(files);
+            assert.deepEqual(invoked, 2);
         });
     });
     describe('#tag', () => {
@@ -136,7 +132,7 @@ describe('stream', () => {
         });
     });
     describe('#flow', () => {
-        it('should merge to one by "connect"', done => {
+        it('should merge to one by "connect"', async() => {
             class TestTransformer extends Transformer {
                 transformAll(files) {
                     assert.deepEqual(files, [{
@@ -158,14 +154,14 @@ describe('stream', () => {
             p2.connect(p3);
             p1.freeze();
             p2.freeze();
-            p1.flow([{
+            await p1.flow([{
                 filename: 'a.js'
-            }]).then(() => p2.flow([{
+            }]);
+            await p2.flow([{
                 filename: 'a.css'
-            }])).then(() => done()).catch(e => console.error(e));
-
+            }]);
         });
-        it('should cache when not torrential', done => {
+        it('should cache when not torrential', async() => {
             let invoked = 0;
 
             class TestTransformer extends Transformer {
@@ -186,24 +182,22 @@ describe('stream', () => {
             p2.connect(p3);
             p2.connect(p4);
             p1.freeze();
-            p1.flow([{
+            await p1.flow([{
                 filename: 'a.js'
-            }]).then(() => {
-                assert.deepEqual(invoked, 1);
-            }).then(() => done()).catch(e => console.error(e));
+            }]);
+            assert.deepEqual(invoked, 1);
         });
-        it('should immutable', done => {
+        it('should immutable', async() => {
             const p1 = new PantoStream();
             const f = {
                 filename: 'a.js'
             };
             p1.freeze();
-            p1.notify([f], true).then(ft => {
-                f.filename = 'b.js';
-                assert.deepEqual(ft[0].filename, 'a.js');
-            }).then(() => done()).catch(e => console.error(e));
+            let ft = await p1.notify([f], true);
+            f.filename = 'b.js';
+            assert.deepEqual(ft[0].filename, 'a.js');
         });
-        it('should flow to the bottom', done => {
+        it('should flow to the bottom', async() => {
             let invoked = 0;
 
             class TestTransformer extends Transformer {
@@ -223,18 +217,17 @@ describe('stream', () => {
             const p4 = new PantoStream(new TestTransformer());
             p1.connect(p2).connect(p3).connect(p4);
             p1.freeze();
-            p1.flow([{
+            let files = await p1.flow([{
                 filename: 'a.js',
                 content: 'a'
-            }]).then(files => {
-                assert.deepEqual(files, [{
-                    filename: 'a.js',
-                    content: 'aaaaa'
-                }]);
-                assert.deepEqual(invoked, 4);
-            }).then(() => done()).catch(e => console.error(e));
+            }]);
+            assert.deepEqual(files, [{
+                filename: 'a.js',
+                content: 'aaaaa'
+            }]);
+            assert.deepEqual(invoked, 4);
         });
-        it('should ignore null', done => {
+        it('should ignore null', async() => {
             class NilTransformer extends Transformer {
                 _transform(file) {
                     if (file.content) {
@@ -244,13 +237,12 @@ describe('stream', () => {
                     }
                 }
             }
-            new PantoStream(new NilTransformer()).freeze().flow([{
+            let files = new PantoStream(new NilTransformer()).freeze().flow([{
                 filename: 'a.js'
-            }]).then(files => {
-                assert.deepEqual(files, [])
-            }).then(() => done()).catch(e => console.error(e));
+            }]);
+            assert.deepEqual(files, []);
         });
-        it('should not notify files if not mergeFile', done => {
+        it('should not notify files if not mergeFile', async() => {
             let invoked = 0;
 
             class TestTransformer extends Transformer {
@@ -266,12 +258,11 @@ describe('stream', () => {
             const p2 = new PantoStream(new TestTransformer());
             p1.connect(p2, false);
             p1.freeze();
-            p1.flow([{
+            const files = p1.flow([{
                 filename: 'a.js'
-            }]).then(files => {
-                assert.deepEqual(files, []);
-                assert.deepEqual(invoked, 0);
-            }).then(() => done()).catch(e => console.error(e));
+            }]);
+            assert.deepEqual(files, []);
+            assert.deepEqual(invoked, 0);
         });
         it(
             `
@@ -291,7 +282,7 @@ describe('stream', () => {
                         ▼        ▼          |
                         |-------►9---------►11
 `,
-            done => {
+            async() => {
 
                 const flags = [];
                 class TestTransformer extends Transformer {
@@ -358,39 +349,38 @@ describe('stream', () => {
                 p9.connect(p11).connect(p12);
 
                 p0.freeze();
-                p0.flow([{
+                let files = await p0.flow([{
                     filename: 'a.js',
                     content: ''
-                }]).then(files => {
+                }])
 
-                    assert.deepEqual(files, [{
-                        filename: 'a.js',
-                        content: ',0,1,2,3,12'
-                    }, {
-                        filename: 'a.js',
-                        content: ',0,1,2,5,6,9,11,12'
-                    }, {
-                        filename: 'a.js',
-                        content: ',0,4,5,6,9,11,12'
-                    }, {
-                        filename: 'a.js',
-                        content: ',0,7,8,9,11,12'
-                    }, {
-                        filename: 'a.js',
-                        content: ',0,1,2,5,10,12'
-                    }, {
-                        filename: 'a.js',
-                        content: ',0,4,5,10,12'
-                    }, {
-                        filename: 'a.js',
-                        content: ',0,7,8,10,12'
-                    }]);
-                    assert.deepEqual(flags, ['0', '1', '2', '3', '4', '5', '6', '7', '8',
-                        '9', '11', '10', '12'
-                    ]);
-                }).then(() => done()).catch(e => console.error(e));
+                assert.deepEqual(files, [{
+                    filename: 'a.js',
+                    content: ',0,1,2,3,12'
+                }, {
+                    filename: 'a.js',
+                    content: ',0,1,2,5,6,9,11,12'
+                }, {
+                    filename: 'a.js',
+                    content: ',0,4,5,6,9,11,12'
+                }, {
+                    filename: 'a.js',
+                    content: ',0,7,8,9,11,12'
+                }, {
+                    filename: 'a.js',
+                    content: ',0,1,2,5,10,12'
+                }, {
+                    filename: 'a.js',
+                    content: ',0,4,5,10,12'
+                }, {
+                    filename: 'a.js',
+                    content: ',0,7,8,10,12'
+                }]);
+                assert.deepEqual(flags, ['0', '1', '2', '3', '4', '5', '6', '7', '8',
+                    '9', '11', '10', '12'
+                ]);
             });
-        it('should clear cache after a torrential', done => {
+        it('should clear cache after a torrential', async() => {
             class TorrentialTransformer extends Transformer {
                 transformAll(files) {
                     let content = '';
@@ -414,27 +404,25 @@ describe('stream', () => {
             p1.pipe(new TorrentialTransformer()).pipe(new Transformer());
 
             p1.freeze();
-            p1.flow([{
+            let files = await p1.flow([{
                 filename: 'a.js',
                 content: 'a'
             }, {
                 filename: 'b.js',
                 content: 'b'
-            }]).then(files => {
-                assert.deepEqual(files, [{
-                    filename: 'bundle.js',
-                    content: 'ab'
-                }]);
-                return p1.flow([{
-                    filename: 'a.js',
-                    content: 'a'
-                }]);
-            }).then(files => {
-                assert.deepEqual(files, [{
-                    filename: 'bundle.js',
-                    content: 'a'
-                }]);
-            }).then(() => done()).catch(e => console.error(e));
+            }]);
+            assert.deepEqual(files, [{
+                filename: 'bundle.js',
+                content: 'ab'
+            }]);
+            files = await p1.flow([{
+                filename: 'a.js',
+                content: 'a'
+            }]);
+            assert.deepEqual(files, [{
+                filename: 'bundle.js',
+                content: 'a'
+            }]);
         });
         it('should flow in defined order', done => {
             class AopTransformer extends Transformer {
@@ -467,7 +455,7 @@ describe('stream', () => {
                 timeout: 200,
                 aop: () => {
                     assert.ok(p2Injected);
-                    done()
+                    done();
                 }
             }));
 
@@ -476,7 +464,7 @@ describe('stream', () => {
                 filename: 'a.js'
             }]);
         });
-        it('should reset after flow failed', done => {
+        it('should reset after flow failed', async() => {
             let invoked = 0;
             class TestTransformer extends Transformer {
                 _transform(file) {
@@ -489,40 +477,32 @@ describe('stream', () => {
 
             p1.freeze();
 
-            p1.notify([{
+            let files = await p1.notify([{
                 filename: 'a.js'
-            }]).then(files => {
-                assert.deepEqual(files.length, 1);
-                return p1.flow();
-            }).catch(() => {
-                return p1.flow();
-            }).then(files => {
-                assert.deepEqual(files.length, 0);
-                done();
-            }).catch(e => console.error(e));
+            }]);
+            assert.deepEqual(files.length, 1);
+            files = await p1.flow();
+            assert.deepEqual(files.length, 0);
         });
     });
     describe('#reset', () => {
-        it('should reset after flow', done => {
+        it('should reset after flow', async() => {
             const p1 = new PantoStream();
 
             p1.freeze();
-            p1.notify([{
+            let files = await p1.notify([{
                 filename: 'a.js'
-            }]).then(files => {
-                assert.deepEqual(files.length, 1);
-                return p1.flow();
-            }).then(files => {
-                assert.deepEqual(files.length, 0);
-                p1.reset();
-                return p1.flow();
-            }).then(files => {
-                assert.deepEqual(files.length, 0);
-            }).then(() => done()).catch(e => console.error(e));
+            }]);
+            assert.deepEqual(files.length, 1);
+            files = await p1.flow();
+            assert.deepEqual(files.length, 0);
+            p1.reset();
+            files = await p1.flow();
+            assert.deepEqual(files.length, 0);
         })
     });
     describe('#clearCache', () => {
-        it('should cleard cache', done => {
+        it('should cleard cache', async() => {
             let invokedA = 0;
             let invokedB = 0;
 
@@ -548,26 +528,26 @@ describe('stream', () => {
             p2.connect(p3);
             p2.connect(p4);
             p1.freeze();
-            p1.flow([{
+            await p1.flow([{
                 filename: 'a.js',
                 content: 'a'
             }, {
                 filename: 'b.js',
                 content: 'b'
-            }]).then(() => {
-                return p1.flow([{
-                    filename: 'a.js',
-                    content: 'aa'
-                }, {
-                    filename: 'b.js',
-                    content: 'b'
-                }]);
-            }).then(() => {
-                assert.deepEqual(invokedA, 2);
-                assert.deepEqual(invokedB, 1);
-            }).then(() => done()).catch(e => console.error(e));
+            }]);
+
+            await p1.flow([{
+                filename: 'a.js',
+                content: 'aa'
+            }, {
+                filename: 'b.js',
+                content: 'b'
+            }]);
+
+            assert.deepEqual(invokedA, 2);
+            assert.deepEqual(invokedB, 1);
         });
-        it('should clear cache dependencies', done => {
+        it('should clear cache dependencies', async() => {
             class TestTransformer extends Transformer {
                 _transform(file) {
                     return Promise.resolve([file, {
@@ -584,31 +564,31 @@ describe('stream', () => {
 
             p1.freeze();
 
-            p1.flow([{
+            let files = await p1.flow([{
                 filename: 'a.js',
                 content: 'a'
-            }]).then(files => {
-                return p1.flow([{
-                    filename: 'b.js',
-                    content: 'b'
-                }]);
-            }).then(files => {
-                assert.deepEqual(files, [{
-                    filename: 'b.js',
-                    content: 'b'
-                }, {
-                    filename: 'x.js',
-                    content: 'b'
-                }]);
-            }).then(() => done()).catch(e => console.error(e));
+            }]);
+
+            files = await p1.flow([{
+                filename: 'b.js',
+                content: 'b'
+            }]);
+
+            assert.deepEqual(files, [{
+                filename: 'b.js',
+                content: 'b'
+            }, {
+                filename: 'x.js',
+                content: 'b'
+            }]);
         });
     });
     describe('#toString', () => {
-        it('should return tag ', () => {
+        it('should return tag', () => {
             const p1 = new PantoStream().tag('x');
-            assert.deepEqual(p1.toString(), 'x');
+            assert.deepEqual('' + p1, 'x');
         });
-        it('should return inspect ', () => {
+        it('should return inspect', () => {
             const p1 = new PantoStream();
             assert.ok(`${p1}`);
         });
